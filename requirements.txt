@@ -1,0 +1,36 @@
+# --- Frontend UI ---
+gradio
+
+# --- LLM & Agent Framework ---
+langchain # Latest stable for Python 3.12
+
+# --- Local LLM Runtime ---
+ollama
+
+# --- Vector Database ---
+chromadb
+
+# --- PDF Parsing ---
+PyMuPDF
+pdfplumber
+
+# --- Web Scraping & HTTP ---
+beautifulsoup4
+requests
+
+# --- Google API (Optional for Calendar / Gmail Integration) ---
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+
+# --- Utilities ---
+python-dotenv
+tqdm
+
+# --- Optional but Recommended for Stability ---
+pydantic
+typing-extensions
+
+supabase
+
+openai
