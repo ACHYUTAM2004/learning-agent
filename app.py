@@ -12,7 +12,7 @@ from utils.supabase_handler import semantic_search, upload_pdf, store_embeddings
 # --- API Configuration ---
 # Make sure you have your GOOGLE_API_KEY in a .env file
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-pro-latest')
+model = genai.GenerativeModel('gemini-pro-latest')
 
 # --- Core Logic Functions ---
 def generate_answer(query):
