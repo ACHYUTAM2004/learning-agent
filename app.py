@@ -27,7 +27,7 @@ def generate_answer(query):
     
     prompt = f"""
     Based on the following context from a document, please answer the user's question.
-    Provide a clear and concise answer. If the context is insufficient, say so.
+    Provide a clear and concise answer. If the context is insufficient, assume you are a subject matter expert and answer the query.
 
     Context:
     {context}
