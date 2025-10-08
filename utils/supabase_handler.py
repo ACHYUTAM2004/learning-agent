@@ -1,14 +1,12 @@
 import os
+import streamlit as st  # Make sure this import is present
 from supabase import create_client, Client
 from typing import List
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-BUCKET_NAME = os.getenv("SUPABASE_BUCKET")
+# Use Streamlit's secrets management for deployment
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+BUCKET_NAME = st.secrets["SUPABASE_BUCKET"]
 
 # Initialize the Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
