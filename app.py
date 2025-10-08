@@ -43,19 +43,14 @@ def generate_answer(query):
     except Exception as e:
         return f"An error occurred while generating the answer: {e}"
 
-def process_file(file):
+def process_file(file_path, original_filename):
     """Processes an uploaded PDF file."""
-    if file is None:
-        return "No file uploaded. Please upload a PDF to begin."
-        
     try:
-        original_filename = os.path.basename(file.name)
-        
         # 1. Upload to Supabase Storage
-        upload_pdf(file.name, original_filename)
+        upload_pdf(file_path, original_filename)
         
         # 2. Extract text and create embeddings
-        with open(file.name, "rb") as f:
+        with open(file_path, "rb") as f:
             pdf_bytes = f.read()
         text = extract_text(pdf_bytes)
         chunks = textwrap.wrap(text, 1000)
@@ -64,16 +59,15 @@ def process_file(file):
         # 3. Store in Supabase vector table
         store_embeddings(original_filename, chunks, embeddings)
         
-        return f"✅ Successfully processed '{original_filename}'. You can now ask questions."
+        return True
     except Exception as e:
         # Check for the specific duplicate file error
         if "Duplicate" in str(e):
-            return f"⚠️ File '{original_filename}' has already been processed. You can start asking questions."
-        return f"❌ Error processing file: {e}"
+            st.warning(f"⚠️ File '{original_filename}' has already been processed. You can start asking questions.")
+            return True # It's not a failure, the file is ready to be queried
+        st.error(f"❌ Error processing file: {e}")
+        return False
 
-def handle_chat(message, history):
-    """Handles the user's message in the chatbot."""
-    return generate_answer(message)
 
 # --- Streamlit UI ---
 
