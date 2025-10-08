@@ -18,7 +18,7 @@ model = genai.GenerativeModel('gemini-pro-latest')
 def generate_answer(query):
     """Orchestrates the RAG pipeline to generate an answer for a given query."""
     query_embedding = generate_embeddings([query])[0]
-    relevant_chunks = semantic_search(query_embedding)
+    relevant_chunks = semantic_search(query_embedding,top_k=15)
     
     if not relevant_chunks:
         return "Sorry, I couldn't find any relevant information in the uploaded documents."
