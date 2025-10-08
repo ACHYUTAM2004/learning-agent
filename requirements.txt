@@ -1,5 +1,5 @@
 # --- Frontend UI ---
-gradio
+streamlit
 
 # --- LLM & Agent Framework ---
 langchain # Latest stable for Python 3.12
@@ -33,4 +33,4 @@ typing-extensions
 
 supabase
 
-openai
+google-generativeai
