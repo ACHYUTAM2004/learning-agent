@@ -19,7 +19,7 @@ flash_model = genai.GenerativeModel('gemini-flash-latest')
 
 
 # --- Core Logic Functions ---
-def generate_answer(query,model):
+def generate_answer(query,model,knowledge_level):
     """RAG pipeline for answering questions based on a PDF."""
     query_embedding = generate_embeddings([query])[0]
     relevant_chunks = semantic_search(query_embedding, top_k=10)
@@ -30,7 +30,8 @@ def generate_answer(query,model):
     context = "\n".join([chunk['chunk'] for chunk in relevant_chunks])
     
     prompt = f"""
-    You are an expert AI Learning Partner. Your goal is to provide a comprehensive and helpful answer to the user's question.
+    You are an expert AI Learning Partner. The user you are helping has a knowledge level of **'{knowledge_level}'**.
+    You must tailor your explanation's depth, language, and complexity to match this level. For 'Beginners', use simple terms and analogies. For 'Experts', provide technical, nuanced details.
 
     A user has asked the following question: "{query}"
 
@@ -40,10 +41,10 @@ def generate_answer(query,model):
     {context}
     ---
 
-    Please follow these steps to answer the question:
-    1. First, carefully analyze the provided context to see if it directly answers the user's question.
-    2. If the context fully answers the question, provide the answer based **only** on that context.
-    3. If the context is insufficient or does not contain the answer, use your own general knowledge to provide a complete and accurate response. When doing so, you can optionally mention that the information extends beyond the provided document.
+    Please follow these steps to answer the question, always keeping the user's knowledge level in mind:
+    1.  First, carefully analyze the provided context to see if it directly answers the user's question.
+    2.  If the context fully answers the question, provide the answer based **only** on that context, adapting the explanation for the user's knowledge level.
+    3.  If the context is insufficient, use your own general knowledge to provide a complete and accurate response, still tailored to the user's knowledge level.
     """
     
     try:
@@ -52,19 +53,20 @@ def generate_answer(query,model):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def generate_topic_answer(query, chat_history,model):
+def generate_topic_answer(query, chat_history,model,knowledge_level):
     """Generates an answer for a general topic using the AI's knowledge."""
     history_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
 
     prompt = f"""
-    You are an expert AI Learning Partner helping a user understand a topic.
-    
+    You are an AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
+    Tailor your explanation's depth and language accordingly. For Beginners, use simple terms and analogies. For Experts, provide technical and nuanced details.
+
+    Review the conversation history and answer the user's latest question.
+
     Conversation History:
     {history_context}
     ---
     User's New Question: "{query}"
-
-    Provide a clear, helpful, and structured response.
     """
     
     try:
@@ -96,19 +98,29 @@ def process_file(file_path, original_filename):
 st.set_page_config(page_title="AI Learning Partner", page_icon="🧠")
 st.title("🧠 AI Learning Partner")
 
+# --- USER ONBOARDING & SESSION MANAGEMENT ---
 if "user_info" not in st.session_state:
     st.session_state.user_info = None
 
 if st.session_state.user_info is None:
     st.markdown("Welcome! Please enter a username to start your session.")
     username = st.text_input("Username")
+    
+    # ADDED: Knowledge level selection
+    knowledge_level = st.selectbox(
+        "What is your knowledge level on most topics?",
+        ("Beginner", "Intermediate", "Expert")
+    )
+
     if st.button("Start Session"):
         if username:
-            with st.spinner("Setting up..."):
-                st.session_state.user_info = get_or_create_user(username)
+            with st.spinner("Setting up your session..."):
+                # Pass the knowledge level when creating the user
+                st.session_state.user_info = get_or_create_user(username, knowledge_level)
             st.rerun()
         else:
             st.warning("Please enter a username.")
+
 else:
     # --- MAIN APP AFTER LOGIN ---
     username = st.session_state.user_info['username']
@@ -169,17 +181,18 @@ else:
             st.markdown(prompt)
 
         # Generate and display assistant response
+        knowledge_level = st.session_state.user_info['knowledge_level']
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 if st.session_state.mode == "Study a Document":
                     if st.session_state.processed_file:
-                        response = generate_answer(prompt,model=pro_model)
+                        response = generate_answer(prompt,model=pro_model,knowledge_level=knowledge_level)
                         save_message(user_id, "user", prompt, st.session_state.processed_file)
                         save_message(user_id, "assistant", response, st.session_state.processed_file)
                     else:
                         response = "Please upload a document to begin."
                 else: # Topic Mode
-                    response = generate_topic_answer(prompt, st.session_state.messages,model=flash_model)
+                    response = generate_topic_answer(prompt, st.session_state.messages,model=flash_model,knowledge_level=knowledge_level)
                     save_message(user_id, "user", prompt) # No document name
                     save_message(user_id, "assistant", response)
                 

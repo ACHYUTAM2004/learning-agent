@@ -78,3 +78,18 @@ def get_chat_history(user_id):
     """Fetches the chat history for a given user."""
     history = supabase.table("conversations").select("role, content").eq("user_id", user_id).order("created_at").execute()
     return history.data
+
+def get_or_create_user(username, knowledge_level):
+    """Fetches a user or creates a new one with a knowledge level."""
+    user = supabase.table("users").select("*").eq("username", username).execute()
+    
+    if user.data:
+        # If user exists, you could optionally update their knowledge level here if needed
+        return user.data[0]
+    else:
+        # Create a new user with their chosen knowledge level
+        new_user = supabase.table("users").insert({
+            "username": username,
+            "knowledge_level": knowledge_level
+        }).execute()
+        return new_user.data[0]
