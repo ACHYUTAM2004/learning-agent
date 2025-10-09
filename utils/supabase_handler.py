@@ -11,7 +11,6 @@ BUCKET_NAME = st.secrets["SUPABASE_BUCKET"]
 # Initialize the Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-
 def upload_pdf(file_path, destination_path):
     """
     Uploads a file to the Supabase storage bucket.
