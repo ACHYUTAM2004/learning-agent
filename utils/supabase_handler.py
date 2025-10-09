@@ -1,4 +1,3 @@
-import os
 import streamlit as st  # Make sure this import is present
 from supabase import create_client, Client
 from typing import List

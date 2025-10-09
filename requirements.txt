@@ -1,15 +1,6 @@
 # --- Frontend UI ---
 streamlit
 
-# --- LLM & Agent Framework ---
-langchain # Latest stable for Python 3.12
-
-# --- Local LLM Runtime ---
-ollama
-
-# --- Vector Database ---
-chromadb
-
 # --- PDF Parsing ---
 PyMuPDF
 pdfplumber
