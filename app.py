@@ -129,6 +129,24 @@ def process_file(file_path, original_filename):
         st.error(f"Error processing file: {e}")
         return False
 
+def generate_explanation(question, user_answer, correct_answer, knowledge_level, model):
+    """Generates an explanation for an incorrect quiz answer."""
+    prompt = f"""
+    You are a helpful tutor. A student with a '{knowledge_level}' knowledge level is taking a quiz.
+    
+    They were asked the following question:
+    "{question}"
+
+    The correct answer is: "{correct_answer}"
+    They incorrectly chose: "{user_answer}"
+
+    Please provide a brief, encouraging explanation (2-3 sentences) that clarifies the concept. Explain why the correct answer is right and, if relevant, why their choice might be a common misconception.
+    """
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Sorry, I couldn't generate an explanation at this time. Error: {e}"
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="AI Learning Partner", page_icon="🧠")
@@ -187,50 +205,59 @@ else:
 
    # --- THIS IS THE MAIN UI CONTROLLER ---
     if st.session_state.quiz_mode:
-        # --- NEW & IMPROVED QUIZ UI ---
         st.header("Quiz Time! 🧠")
 
         index = st.session_state.current_question_index
         questions = st.session_state.quiz_questions
         total_questions = len(questions)
 
-        # NEW: Add a progress bar and score display
-        st.progress((index + 1) / total_questions, text=f"Question {index + 1} of {total_questions}")
-        st.metric(label="Your Score", value=f"{st.session_state.score} / {total_questions}")
-        st.markdown("---")
-
         if index < total_questions:
+            # Display progress and score
+            st.progress((index) / total_questions, text=f"Question {index + 1} of {total_questions}")
+            st.metric(label="Your Score", value=f"{st.session_state.score} / {total_questions}")
+            st.markdown("---")
+            
             q = questions[index]
             
-            # NEW: Use a container for a card-like layout
             with st.container(border=True):
                 st.subheader(f"Question {index + 1}:")
                 st.markdown(q['question'])
 
-                with st.form(key=f"quiz_form_{index}"):
-                    # NEW: Use st.radio for interactive options
-                    user_answer = st.radio(
-                        "Choose your answer:",
-                        options=q['options'],
-                        index=None, # No default selection
-                        label_visibility="collapsed" # Hides the "Choose your answer:" label
-                    )
-                    
-                    submit_button = st.form_submit_button("Submit Answer")
+                # Use a new session state key to track if an answer has been submitted for this question
+                if f"answer_submitted_{index}" not in st.session_state:
+                    with st.form(key=f"quiz_form_{index}"):
+                        user_answer = st.radio("Choose your answer:", options=q['options'], index=None)
+                        submit_button = st.form_submit_button("Submit Answer")
 
-                    if submit_button:
-                        if user_answer is None:
-                            st.warning("Please select an answer.")
-                        elif user_answer == q['correct_answer']:
-                            st.success("Correct! 🎉")
-                            st.session_state.score += 1
-                            st.balloons() # NEW: Fun feedback!
-                            st.session_state.current_question_index += 1
-                            st.rerun() # Use rerun with a small delay for balloons
-                        else:
-                            st.error(f"Not quite. The correct answer was: {q['correct_answer']}")
-                            st.session_state.current_question_index += 1
+                        if submit_button:
+                            st.session_state[f"user_answer_{index}"] = user_answer
+                            st.session_state[f"answer_submitted_{index}"] = True
                             st.rerun()
+                else:
+                    # This block runs AFTER the user has submitted an answer
+                    user_answer = st.session_state[f"user_answer_{index}"]
+                    
+                    if user_answer == q['correct_answer']:
+                        st.success("Correct! 🎉")
+                        # This check ensures balloons run only once
+                        if f"feedback_given_{index}" not in st.session_state:
+                            st.balloons()
+                            st.session_state.score += 1
+                            st.session_state[f"feedback_given_{index}"] = True
+                    else:
+                        st.error(f"Not quite. The correct answer was: **{q['correct_answer']}**")
+                        # This check ensures the explanation is generated only once
+                        if f"feedback_given_{index}" not in st.session_state:
+                            with st.spinner("Generating an explanation..."):
+                                knowledge_level = st.session_state.user_info['knowledge_level']
+                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], knowledge_level, pro_model)
+                                st.info(explanation)
+                            st.session_state[f"feedback_given_{index}"] = True
+                    
+                    # Show "Next Question" button
+                    if st.button("Next Question"):
+                        st.session_state.current_question_index += 1
+                        st.rerun()
         else:
             # Quiz finished
             st.success(f"Quiz complete! Your final score is: {st.session_state.score}/{total_questions}")
