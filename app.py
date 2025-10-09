@@ -226,11 +226,11 @@ else:
                             st.session_state.score += 1
                             st.balloons() # NEW: Fun feedback!
                             st.session_state.current_question_index += 1
-                            st.experimental_rerun() # Use rerun with a small delay for balloons
+                            st.rerun() # Use rerun with a small delay for balloons
                         else:
                             st.error(f"Not quite. The correct answer was: {q['correct_answer']}")
                             st.session_state.current_question_index += 1
-                            st.experimental_rerun()
+                            st.rerun()
         else:
             # Quiz finished
             st.success(f"Quiz complete! Your final score is: {st.session_state.score}/{total_questions}")
