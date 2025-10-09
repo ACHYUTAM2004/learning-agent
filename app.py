@@ -185,28 +185,58 @@ else:
 
     st.subheader(f"Mode: {st.session_state.mode}")
 
-    # --- THIS IS THE MAIN UI CONTROLLER ---
+   # --- THIS IS THE MAIN UI CONTROLLER ---
     if st.session_state.quiz_mode:
-        # --- QUIZ UI ---
-        # (This section handles displaying and managing the quiz)
+        # --- NEW & IMPROVED QUIZ UI ---
+        st.header("Quiz Time! 🧠")
+
         index = st.session_state.current_question_index
         questions = st.session_state.quiz_questions
-        if index < len(questions):
+        total_questions = len(questions)
+
+        # NEW: Add a progress bar and score display
+        st.progress((index + 1) / total_questions, text=f"Question {index + 1} of {total_questions}")
+        st.metric(label="Your Score", value=f"{st.session_state.score} / {total_questions}")
+        st.markdown("---")
+
+        if index < total_questions:
             q = questions[index]
-            st.info(f"Question {index + 1}/{len(questions)}: {q['question']}")
-            with st.form(key=f"quiz_form_{index}"):
-                user_answer = st.radio("Choose your answer:", options=q['options'], index=None)
-                if st.form_submit_button("Submit Answer"):
-                    if user_answer == q['correct_answer']:
-                        st.success("Correct! 🎉")
-                        st.session_state.score += 1
-                    else:
-                        st.error(f"Not quite. The correct answer was: {q['correct_answer']}")
-                    st.session_state.current_question_index += 1
-                    st.rerun()
+            
+            # NEW: Use a container for a card-like layout
+            with st.container(border=True):
+                st.subheader(f"Question {index + 1}:")
+                st.markdown(q['question'])
+
+                with st.form(key=f"quiz_form_{index}"):
+                    # NEW: Use st.radio for interactive options
+                    user_answer = st.radio(
+                        "Choose your answer:",
+                        options=q['options'],
+                        index=None, # No default selection
+                        label_visibility="collapsed" # Hides the "Choose your answer:" label
+                    )
+                    
+                    submit_button = st.form_submit_button("Submit Answer")
+
+                    if submit_button:
+                        if user_answer is None:
+                            st.warning("Please select an answer.")
+                        elif user_answer == q['correct_answer']:
+                            st.success("Correct! 🎉")
+                            st.session_state.score += 1
+                            st.balloons() # NEW: Fun feedback!
+                            st.session_state.current_question_index += 1
+                            st.experimental_rerun() # Use rerun with a small delay for balloons
+                        else:
+                            st.error(f"Not quite. The correct answer was: {q['correct_answer']}")
+                            st.session_state.current_question_index += 1
+                            st.experimental_rerun()
         else:
-            st.success(f"Quiz complete! Your final score is: {st.session_state.score}/{len(questions)}")
-            if st.button("End Session"):
+            # Quiz finished
+            st.success(f"Quiz complete! Your final score is: {st.session_state.score}/{total_questions}")
+            st.markdown("---")
+            if st.button("End Session & Start Over"):
+                # Reset all relevant states to go back to the lobby
                 st.session_state.in_guided_session = False
                 st.session_state.quiz_mode = False
                 st.session_state.messages = []
