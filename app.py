@@ -106,7 +106,7 @@ if st.session_state.user_info is None:
     st.markdown("Welcome! Please enter a username to start your session.")
     username = st.text_input("Username")
     
-    # ADDED: Knowledge level selection
+    # THIS IS THE MISSING SELECTOR FOR THE LOGIN SCREEN
     knowledge_level = st.selectbox(
         "What is your knowledge level on most topics?",
         ("Beginner", "Intermediate", "Expert")
@@ -115,7 +115,7 @@ if st.session_state.user_info is None:
     if st.button("Start Session"):
         if username:
             with st.spinner("Setting up your session..."):
-                # Pass the knowledge level when creating the user
+                # Pass the selected knowledge level when creating the user
                 st.session_state.user_info = get_or_create_user(username, knowledge_level)
             st.rerun()
         else:
