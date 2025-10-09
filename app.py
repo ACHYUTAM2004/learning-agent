@@ -7,7 +7,7 @@ import google.generativeai as genai
 # --- Function Imports ---
 from utils.pdf_parser import extract_text
 from utils.embeddings import generate_embeddings
-from utils.supabase_handler import semantic_search, upload_pdf, store_embeddings
+from utils.supabase_handler import semantic_search, upload_pdf, store_embeddings, get_or_create_user, get_chat_history, save_message
 
 # --- API Configuration ---
 # Make sure you have your GOOGLE_API_KEY in a .env file
@@ -80,63 +80,83 @@ def process_file(file_path, original_filename):
 st.set_page_config(page_title="AI Learning Partner", page_icon="🧠")
 
 st.title("🧠 AI Learning Partner")
-st.markdown("Upload a PDF and ask questions to get summaries, definitions, and more.")
+# --- USER ONBOARDING & SESSION MANAGEMENT ---
+if "user_info" not in st.session_state:
+    st.session_state.user_info = None
 
-# Initialize session state for chat history and processed file
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "processed_file" not in st.session_state:
-    st.session_state.processed_file = None
+if st.session_state.user_info is None:
+    st.markdown("Welcome! Please enter a username to start your personalized learning session.")
+    username = st.text_input("Username")
+    if st.button("Start Session"):
+        if username:
+            with st.spinner("Setting up your session..."):
+                st.session_state.user_info = get_or_create_user(username)
+            st.rerun() # Rerun the script to move to the main app view
+        else:
+            st.warning("Please enter a username.")
 
-# Sidebar for file upload
-with st.sidebar:
-    st.header("Upload Your Document")
-    uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+else:
+    # --- MAIN APP LOGIC (runs after user is identified) ---
+    username = st.session_state.user_info['username']
+    user_id = st.session_state.user_info['id']
+    st.sidebar.success(f"Logged in as **{username}**")
 
-    if uploaded_file is not None:
-        # Process the file only if it's a new file
-        if uploaded_file.name != st.session_state.processed_file:
-            with st.spinner("Processing file... This may take a moment."):
-                # Save the uploaded file to a temporary location
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                    tmp_file.write(uploaded_file.getvalue())
-                    tmp_file_path = tmp_file.name
-                
-                # Call the processing function
-                success = process_file(tmp_file_path, uploaded_file.name)
-                
-                # Clean up the temporary file
-                os.remove(tmp_file_path)
-
-                if success:
-                    st.session_state.processed_file = uploaded_file.name
-                    st.success(f"✅ Successfully processed '{uploaded_file.name}'!")
-                    # Clear previous chat history when a new file is uploaded
-                    st.session_state.messages = []
+    # Initialize session state for the app
+    if "processed_file" not in st.session_state:
+        st.session_state.processed_file = None
+    if "messages" not in st.session_state:
+        # Load chat history from the database
+        chat_history = get_chat_history(user_id)
+        st.session_state.messages = [{"role": msg["role"], "content": msg["content"]} for msg in chat_history]
 
 
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Sidebar for file upload
+    with st.sidebar:
+        st.header("Upload Your Document")
+        uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
-# Accept user input
-if prompt := st.chat_input("Ask a question about your document..."):
-    # First, check if a file has been processed
-    if st.session_state.processed_file is None:
-        st.warning("Please upload and process a PDF file first.")
-    else:
-        # Add user message to chat history
+        if uploaded_file is not None:
+            # Process the file only if it's a new file
+            if uploaded_file.name != st.session_state.processed_file:
+                with st.spinner("Processing file... This may take a moment."):
+                    # Save the uploaded file to a temporary location
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                        tmp_file.write(uploaded_file.getvalue())
+                        tmp_file_path = tmp_file.name
+                    
+                    # Call the processing function
+                    success = process_file(tmp_file_path, uploaded_file.name)
+                    
+                    # Clean up the temporary file
+                    os.remove(tmp_file_path)
+
+                    if success:
+                        st.session_state.processed_file = uploaded_file.name
+                        st.success(f"✅ Successfully processed '{uploaded_file.name}'!")
+                        # Clear previous chat history when a new file is uploaded
+                        st.session_state.messages = []
+
+
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Accept user input
+    if prompt := st.chat_input("Ask a question..."):
+        # Save and display user message
         st.session_state.messages.append({"role": "user", "content": prompt})
-        # Display user message in chat message container
+        save_message(user_id, "user", prompt, st.session_state.processed_file)
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Display assistant response in chat message container
+        # Generate and display assistant response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response = generate_answer(prompt)
                 st.markdown(response)
         
-        # Add assistant response to chat history
+        # Save assistant message
         st.session_state.messages.append({"role": "assistant", "content": response})
+        save_message(user_id, "assistant", response, st.session_state.processed_file)
+

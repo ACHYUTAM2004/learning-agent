@@ -50,3 +50,31 @@ def semantic_search(query_embedding: List[float], top_k: int = 5):
     }).execute()
     
     return results.data
+
+# --- NEW FUNCTIONS FOR PERSONALIZATION ---
+
+def get_or_create_user(username):
+    """Fetches a user by username or creates a new one."""
+    # Check if user exists
+    user = supabase.table("users").select("*").eq("username", username).execute()
+    
+    if user.data:
+        return user.data[0]
+    else:
+        # Create a new user if not found
+        new_user = supabase.table("users").insert({"username": username}).execute()
+        return new_user.data[0]
+
+def save_message(user_id, role, content, document_name=None):
+    """Saves a chat message to the conversations table."""
+    supabase.table("conversations").insert({
+        "user_id": user_id,
+        "role": role,
+        "content": content,
+        "document_name": document_name
+    }).execute()
+
+def get_chat_history(user_id):
+    """Fetches the chat history for a given user."""
+    history = supabase.table("conversations").select("role, content").eq("user_id", user_id).order("created_at").execute()
+    return history.data
