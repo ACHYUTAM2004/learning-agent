@@ -14,7 +14,8 @@ from utils.supabase_handler import (
 
 # --- API & Model Configuration ---
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-model = genai.GenerativeModel('gemini-pro-latest')
+pro_model = genai.GenerativeModel('gemini-pro-latest')
+flash_model = genai.GenerativeModel('gemini-flash-latest')
 
 
 # --- Core Logic Functions ---
@@ -29,16 +30,24 @@ def generate_answer(query):
     context = "\n".join([chunk['chunk'] for chunk in relevant_chunks])
     
     prompt = f"""
-    You are an expert AI Learning Partner. Use the following context from a document to answer the user's question.
+    You are an expert AI Learning Partner. Your goal is to provide a comprehensive and helpful answer to the user's question.
 
+    A user has asked the following question: "{query}"
+
+    Some context has been retrieved from a document they provided:
+    ---
     Context:
     {context}
     ---
-    Question: {query}
+
+    Please follow these steps to answer the question:
+    1. First, carefully analyze the provided context to see if it directly answers the user's question.
+    2. If the context fully answers the question, provide the answer based **only** on that context.
+    3. If the context is insufficient or does not contain the answer, use your own general knowledge to provide a complete and accurate response. When doing so, you can optionally mention that the information extends beyond the provided document.
     """
     
     try:
-        response = model.generate_content(prompt)
+        response = pro_model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"An error occurred: {e}"
@@ -59,7 +68,7 @@ def generate_topic_answer(query, chat_history):
     """
     
     try:
-        response = model.generate_content(prompt)
+        response = flash_model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"An error occurred: {e}"
