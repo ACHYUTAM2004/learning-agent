@@ -145,6 +145,27 @@ else:
     )
     st.session_state.mode = mode
 
+    # 👇 --- ADD THIS BLOCK ---
+    # Create a selector in the sidebar to change the knowledge level
+    st.sidebar.markdown("---") # Visual separator
+    current_level = st.session_state.user_info.get('knowledge_level', 'Intermediate')
+    
+    # Get the index of the current level to set the default value
+    levels = ("Beginner", "Intermediate", "Expert")
+    current_index = levels.index(current_level) if current_level in levels else 1
+
+    new_level = st.sidebar.selectbox(
+        "Adjust your knowledge level:",
+        levels,
+        index=current_index
+    )
+
+    # Update the session state if the level is changed
+    if new_level != current_level:
+        st.session_state.user_info['knowledge_level'] = new_level
+        st.sidebar.info(f"Knowledge level set to **{new_level}**.")
+
+
     # --- UI FOR DOCUMENT MODE ---
     if st.session_state.mode == "Study a Document":
         st.sidebar.header("Upload Your Document")
