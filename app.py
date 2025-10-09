@@ -19,7 +19,7 @@ flash_model = genai.GenerativeModel('gemini-flash-latest')
 
 
 # --- Core Logic Functions ---
-def generate_answer(query):
+def generate_answer(query,model):
     """RAG pipeline for answering questions based on a PDF."""
     query_embedding = generate_embeddings([query])[0]
     relevant_chunks = semantic_search(query_embedding, top_k=10)
@@ -47,12 +47,12 @@ def generate_answer(query):
     """
     
     try:
-        response = pro_model.generate_content(prompt)
+        response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"An error occurred: {e}"
 
-def generate_topic_answer(query, chat_history):
+def generate_topic_answer(query, chat_history,model):
     """Generates an answer for a general topic using the AI's knowledge."""
     history_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
 
@@ -68,7 +68,7 @@ def generate_topic_answer(query, chat_history):
     """
     
     try:
-        response = flash_model.generate_content(prompt)
+        response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"An error occurred: {e}"
@@ -173,13 +173,13 @@ else:
             with st.spinner("Thinking..."):
                 if st.session_state.mode == "Study a Document":
                     if st.session_state.processed_file:
-                        response = generate_answer(prompt)
+                        response = generate_answer(prompt,model=pro_model)
                         save_message(user_id, "user", prompt, st.session_state.processed_file)
                         save_message(user_id, "assistant", response, st.session_state.processed_file)
                     else:
                         response = "Please upload a document to begin."
                 else: # Topic Mode
-                    response = generate_topic_answer(prompt, st.session_state.messages)
+                    response = generate_topic_answer(prompt, st.session_state.messages,model=flash_model)
                     save_message(user_id, "user", prompt) # No document name
                     save_message(user_id, "assistant", response)
                 
