@@ -1,16 +1,16 @@
 # In utils/web_scraper.py
 
-import streamlit as st  # Import Streamlit for logging
+import streamlit as st
 from duckduckgo_search import DDGS
 from newspaper import Article
 import nltk
 
-# --- NLTK Data Check ---
+# --- NLTK Data Check (Corrected) ---
 # Newspaper3k depends on the 'punkt' tokenizer. 
 # This checks if it's available and downloads it if not.
 try:
     nltk.data.find('tokenizers/punkt')
-except nltk.downloader.DownloadError:
+except LookupError:  # CORRECTED: Use LookupError instead of the old DownloadError
     st.info("NLTK 'punkt' tokenizer not found. Downloading...")
     nltk.download('punkt')
     st.info("Download complete.")
