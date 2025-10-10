@@ -221,28 +221,84 @@ else:
             if st.button("End Session"): st.session_state.in_guided_session = False; st.session_state.quiz_mode = False; st.session_state.messages = []; st.rerun()
 
     elif st.session_state.in_guided_session:
-        # --- GUIDED SESSION UI ---
-        plan = st.session_state.lesson_plan; step = st.session_state.lesson_step
-        st.sidebar.markdown("### Lesson Plan");
-        for i, sub_topic in enumerate(plan): st.sidebar.markdown(f"**➡️ {i+1}. {sub_topic}**" if i == step else f"{i+1}. {sub_topic}")
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]): st.markdown(message["content"])
-        if step < len(plan) - 1:
-            if st.button("Continue to Next Step"):
-                st.session_state.lesson_step += 1
-                with st.spinner("Preparing the next topic..."):
-                    next_sub_topic = plan[st.session_state.lesson_step]
-                    explanation = explain_sub_topic(next_sub_topic, st.session_state.user_info['knowledge_level'], flash_model)
-                    st.session_state.messages.append({"role": "assistant", "content": explanation})
-                st.rerun()
-        else:
-            st.info("You've completed the guided lesson!")
-            if st.button("Ready for a quiz?"):
-                with st.spinner("Generating your quiz..."):
-                    conversation_context = " ".join([msg['content'] for msg in st.session_state.messages if msg['role'] == 'assistant'])
-                    quiz = generate_quiz(conversation_context, pro_model)
-                    if quiz: st.session_state.quiz_questions = quiz; st.session_state.current_question_index = 0; st.session_state.score = 0; st.session_state.quiz_mode = True; st.rerun()
+        # --- "TEACH & QUIZ" GUIDED SESSION UI ---
+        plan = st.session_state.lesson_plan
+        step = st.session_state.lesson_step
+        
+        # Display the lesson plan in the sidebar for context
+        st.sidebar.markdown("### Lesson Plan")
+        for i, sub_topic in enumerate(plan):
+            st.sidebar.markdown(f"**➡️ {i+1}. {sub_topic}**" if i == step else f"{i+1}. {sub_topic}")
 
+        # Display the latest explanation
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # This new state tracks if we are teaching or quizzing for the current step
+        if 'step_phase' not in st.session_state:
+            st.session_state.step_phase = 'teaching'
+
+        # --- TEACHING PHASE ---
+        if st.session_state.step_phase == 'teaching':
+            if st.button("I'm ready for a quick quiz on this!"):
+                with st.spinner("Generating mini-quiz..."):
+                    # Use only the last explanation as context for the quiz
+                    context = st.session_state.messages[-1]['content']
+                    quiz = generate_quiz(context, pro_model, num_questions=2) # Generate a short, 1-question quiz
+                    if quiz:
+                        st.session_state.quiz_questions = quiz
+                        st.session_state.current_question_index = 0
+                        st.session_state.step_phase = 'quizzing' # Switch to the quizzing phase
+                        st.rerun()
+        
+        # --- QUIZZING PHASE ---
+        elif st.session_state.step_phase == 'quizzing':
+            index = st.session_state.current_question_index
+            questions = st.session_state.quiz_questions
+
+            if index < len(questions):
+                # Display the mini-quiz question using a form
+                q = questions[index]
+                with st.form(key=f"mini_quiz_form_{index}"):
+                    st.info(f"Quick Question: {q['question']}")
+                    user_answer = st.radio("Choose:", q['options'], index=None, label_visibility="collapsed")
+                    if st.form_submit_button("Submit"):
+                        if user_answer == q['correct_answer']:
+                            st.success("Correct!")
+                        else:
+                            st.error(f"The correct answer was: {q['correct_answer']}")
+                        st.session_state.current_question_index += 1
+                        st.rerun()
+            else:
+                # This block runs after the mini-quiz for a step is finished
+                st.info("Great work on that section!")
+                st.session_state.lesson_step += 1 # Advance to the next lesson step
+                
+                if st.session_state.lesson_step < len(plan):
+                    # If there are more steps, prepare the next topic
+                    with st.spinner("Preparing the next topic..."):
+                        next_sub_topic = plan[st.session_state.lesson_step]
+                        explanation = explain_sub_topic(next_sub_topic, st.session_state.user_info['knowledge_level'], flash_model)
+                        st.session_state.messages.append({"role": "assistant", "content": explanation})
+                        st.session_state.step_phase = 'teaching' # Go back to the teaching phase for the new step
+                        st.session_state.current_question_index = 0 # Reset quiz index
+                    st.rerun()
+                else:
+                    # If all steps are done, end the guided session and offer the final quiz
+                    st.success("You've completed the entire guided lesson! Well done! 🎉")
+                    st.session_state.in_guided_session = False
+                    
+                    if st.button("Take the Final Review Quiz"):
+                        with st.spinner("Generating your final quiz..."):
+                            conversation_context = " ".join([msg['content'] for msg in st.session_state.messages if msg['role'] == 'assistant'])
+                            final_quiz = generate_quiz(conversation_context, pro_model, num_questions=5)
+                            if final_quiz:
+                                st.session_state.quiz_questions = final_quiz
+                                st.session_state.current_question_index = 0
+                                st.session_state.score = 0
+                                st.session_state.quiz_mode = True # Activate the main, comprehensive quiz UI
+                                st.rerun()
     else:
         # --- DEFAULT LOBBY / FREE-FORM CHAT UI ---
         if st.session_state.mode == "Guided Learning Session":

@@ -1,13 +1,14 @@
 import json
 import streamlit as st
 
-def generate_quiz(context, model):
+def generate_quiz(context, model, num_questions=2): # Add num_questions argument
     """
     Generates a multiple-choice quiz from a given context using the provided model.
     """
     
+    # Use the num_questions argument in the prompt
     prompt = f"""
-    You are an expert quiz designer. Based on the following text context, create a 3-question multiple-choice quiz.
+    You are an expert quiz designer. Based on the following text context, create a {num_questions}-question multiple-choice quiz.
     The questions should test the user's understanding of the key concepts in the text.
 
     **Instructions for output:**
