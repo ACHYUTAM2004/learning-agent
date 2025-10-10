@@ -13,7 +13,6 @@ from utils.supabase_handler import (
     get_or_create_user, save_message, get_chat_history
 )
 from utils.quiz_generator import generate_quiz
-from utils.web_scraper import search_and_scrape
 
 # --- API & Model Configuration ---
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -149,43 +148,6 @@ def generate_explanation(question, user_answer, correct_answer, knowledge_level,
     except Exception as e:
         return f"Sorry, I couldn't generate an explanation at this time. Error: {e}"
 
-def generate_enhanced_topic_answer(query, chat_history, model, knowledge_level):
-    """Generates an enhanced answer using a web search and cites the source if available."""
-    with st.spinner(f"Searching the web for '{query}'..."):
-        scraped_context, source_url = search_and_scrape(query)
-
-    history_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
-    
-    # NEW: The prompt now changes based on whether scraping was successful
-    if source_url:
-        # If we have a source, instruct the AI to use it and cite it
-        prompt = f"""
-        You are an AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
-        
-        Use the fresh context scraped from the web article below to provide a comprehensive answer to the user's question.
-        
-        Web Context:
-        {scraped_context}
-        ---
-        User's Question: "{query}"
-
-        **IMPORTANT:** At the end of your answer, you MUST cite the source. Format it on a new line exactly like this:
-        *Source: [{source_url}]({source_url})*
-        """
-    else:
-        # If scraping failed, just use general knowledge and do not cite
-        prompt = f"""
-        You are an AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
-        I could not find a specific web article for this topic. Please use your general knowledge to answer the user's question.
-
-        User's Question: "{query}"
-        """
-    
-    try:
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"An error occurred: {e}"
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="AI Learning Partner", page_icon="🧠")
@@ -354,47 +316,17 @@ else:
                             st.session_state.messages.append({"role": "assistant", "content": f"Great! I've prepared a lesson on '{topic}'. Here is the first part:"})
                             st.session_state.messages.append({"role": "assistant", "content": explanation}); st.rerun()
 
-        # In app.py, replace the General Q&A block
-
         elif st.session_state.mode == "General Q&A":
-            # Display chat history
             for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
-            
-            # Show the "Enhance with Web Search" button only after an assistant has responded
-            if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
-                if st.button("Enhance with Web Search 🔍"):
-                    with st.chat_message("assistant"):
-                        with st.spinner("Searching the web and refining the answer..."):
-                            # The last user question is two messages back in the history
-                            last_user_query = st.session_state.messages[-2]['content']
-                            knowledge_level = st.session_state.user_info['knowledge_level']
-                            
-                            enhanced_response = generate_enhanced_topic_answer(last_user_query, st.session_state.messages, flash_model, knowledge_level)
-                            
-                            # Replace the last, basic answer with the new, enhanced one
-                            st.session_state.messages[-1] = {"role": "assistant", "content": enhanced_response}
-                            save_message(user_id, "assistant", enhanced_response) # Optionally update the DB
-                            st.rerun()
-
-            # The main chat input
+                with st.chat_message(message["role"]): st.markdown(message["content"])
             if prompt := st.chat_input("Ask a free-form question..."):
                 st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-                
+                with st.chat_message("user"): st.markdown(prompt)
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
-                        knowledge_level = st.session_state.user_info['knowledge_level']
-                        # Call the BASIC function for the initial, fast response
-                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, knowledge_level)
-                        save_message(user_id, "user", prompt)
-                        save_message(user_id, "assistant", response)
-                        st.markdown(response)
-                
+                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, st.session_state.user_info['knowledge_level'])
+                        save_message(user_id, "user", prompt); save_message(user_id, "assistant", response); st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
-                st.rerun() # Rerun to show the new "Enhance" button
 
         elif st.session_state.mode == "Study a Document":
             st.sidebar.header("Upload Your Document")
