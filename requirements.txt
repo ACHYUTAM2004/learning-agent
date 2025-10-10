@@ -33,3 +33,5 @@ newspaper3k
 requests
 
 lxml[html_clean] 
+
+nltk
