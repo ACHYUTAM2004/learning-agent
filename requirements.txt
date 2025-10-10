@@ -29,3 +29,7 @@ google-generativeai
 duckduckgo-search
 
 newspaper3k
+
+requests
+
+lxml[html_clean] 
