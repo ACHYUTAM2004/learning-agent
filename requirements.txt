@@ -27,3 +27,5 @@ supabase
 google-generativeai
 
 duckduckgo-search
+
+newspaper3k

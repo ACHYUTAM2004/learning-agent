@@ -1,11 +1,10 @@
-import requests
-from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
+from newspaper import Article
 
 def search_and_scrape(query: str):
     """
-    Performs a web search, scrapes the first result, and returns
-    the cleaned text content AND the source URL.
+    Performs a web search, scrapes the first result using newspaper3k,
+    and returns the cleaned text content and the source URL.
     """
     try:
         with DDGS() as ddgs:
@@ -13,19 +12,16 @@ def search_and_scrape(query: str):
             if not results:
                 return "Could not find any web results.", None
             
-            first_result_url = results[0]['href']
+            url = results[0]['href']
 
-        response = requests.get(first_result_url, timeout=10)
-        response.raise_for_status()
+        # Use newspaper3k to download and parse the article
+        article = Article(url)
+        article.download()
+        article.parse()
         
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        paragraphs = soup.find_all('p')
-        scraped_text = ' '.join([p.get_text() for p in paragraphs])
-        
-        # Return both the text and the URL
-        return scraped_text[:2000], first_result_url
+        # Return the article's text and the source URL
+        return article.text[:2000], url
         
     except Exception as e:
-        print(f"Web scraping failed: {e}")
-        return "", None # Return empty string and None on failure
+        print(f"Web scraping with newspaper3k failed: {e}")
+        return "", None

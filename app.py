@@ -150,35 +150,39 @@ def generate_explanation(question, user_answer, correct_answer, knowledge_level,
         return f"Sorry, I couldn't generate an explanation at this time. Error: {e}"
 
 def generate_enhanced_topic_answer(query, chat_history, model, knowledge_level):
-    """Generates an enhanced answer using a web search and cites the source."""
+    """Generates an enhanced answer using a web search and cites the source if available."""
     with st.spinner(f"Searching the web for '{query}'..."):
-        # The function now returns two values
         scraped_context, source_url = search_and_scrape(query)
 
     history_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
     
-    # NEW: The prompt is updated to include the source URL instruction
-    prompt = f"""
-    You are an expert AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
-    
-    Review the fresh context scraped from a web article:
-    ---
-    Web Context:
-    {scraped_context}
-    ---
+    # NEW: The prompt now changes based on whether scraping was successful
+    if source_url:
+        # If we have a source, instruct the AI to use it and cite it
+        prompt = f"""
+        You are an AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
+        
+        Use the fresh context scraped from the web article below to provide a comprehensive answer to the user's question.
+        
+        Web Context:
+        {scraped_context}
+        ---
+        User's Question: "{query}"
 
-    Based on the web context and your own knowledge, provide a comprehensive answer to the user's question: "{query}"
+        **IMPORTANT:** At the end of your answer, you MUST cite the source. Format it on a new line exactly like this:
+        *Source: [{source_url}]({source_url})*
+        """
+    else:
+        # If scraping failed, just use general knowledge and do not cite
+        prompt = f"""
+        You are an AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
+        I could not find a specific web article for this topic. Please use your general knowledge to answer the user's question.
 
-    **IMPORTANT:** At the very end of your answer, you MUST cite the source of the web context.
-    Format it on a new line exactly like this, using Markdown for the link: 
-    *Source: [{source_url}]({source_url})*
-    """
+        User's Question: "{query}"
+        """
     
     try:
         response = model.generate_content(prompt)
-        # If no web context was found, provide a fallback message
-        if not scraped_context:
-            return "I couldn't find a relevant article on the web, but here is an answer from my general knowledge:\n\n" + response.text
         return response.text
     except Exception as e:
         return f"An error occurred: {e}"
