@@ -10,16 +10,17 @@ def get_video_id(youtube_url):
 
 def get_transcript(youtube_url):
     """
-    Fetches the transcript for a given YouTube video URL and returns it as a single string.
+    Fetches the transcript and returns it along with the clean video_id.
     """
     video_id = get_video_id(youtube_url)
     if not video_id:
-        return None, "Invalid YouTube URL provided."
+        # Return three values to maintain a consistent function signature
+        return None, None, "Invalid YouTube URL provided."
 
     try:
         transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-        # Combine the transcript parts into a single block of text
         full_transcript = " ".join([item['text'] for item in transcript_list])
-        return full_transcript, None
+        # Return the transcript, the video_id, and no error
+        return full_transcript, video_id, None
     except Exception as e:
-        return None, f"Could not retrieve transcript: {e}"
+        return None, None, f"Could not retrieve transcript: {e}"

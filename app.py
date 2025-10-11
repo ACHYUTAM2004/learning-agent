@@ -375,12 +375,20 @@ else:
             if st.sidebar.button("Process Video"):
                 if youtube_url:
                     with st.spinner("Fetching and processing video transcript..."):
-                        # This function handles getting the transcript and storing embeddings
-                        transcript = get_transcript(youtube_url)
-                        if transcript:
-                            st.session_state.processed_file = youtube_url # Use URL as the ID
-                            st.success("Video processed! You can now ask questions about it.")
-                            st.session_state.messages = [] # Clear previous chat
+                        # The function now returns three values
+                        transcript, video_id, error = get_transcript(youtube_url)
+                        if error:
+                            st.error(error)
+                        else:
+                            # Use the clean video_id as the unique identifier
+                            chunks = textwrap.wrap(transcript, 1000)
+                            embeddings = generate_embeddings(chunks)
+                            store_embeddings(video_id, chunks, embeddings)
+                            
+                            # Store the clean video_id in the session state
+                            st.session_state.processed_file = video_id
+                            st.success(f"Successfully processed video '{video_id}'! You can now ask questions.")
+                            st.session_state.messages = []
                             st.rerun()
                 else:
                     st.sidebar.warning("Please enter a YouTube URL.")
