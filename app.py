@@ -157,7 +157,7 @@ def generate_explanation(question, user_answer, correct_answer, knowledge_level,
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="AI Learning Partner", page_icon="🧠")
-st.title("🧠 AI Learning Partner")
+# st.title("🧠 AI Learning Partner")
 
 # --- Initialize Session State ---
 if "user_info" not in st.session_state:
@@ -176,17 +176,38 @@ if "user_info" not in st.session_state:
 if "current_goal" not in st.session_state:
     st.session_state.current_goal = None
 
+if "show_login" not in st.session_state:
+    st.session_state.show_login = False
+
 # --- User Onboarding ---
 if st.session_state.user_info is None:
-    st.markdown("Welcome! Please enter a username to start your session.")
-    username = st.text_input("Username")
-    if st.button("Start Session"):
-        if username:
-            with st.spinner("Setting up..."):
-                st.session_state.user_info = get_or_create_user(username)
-            st.rerun()
-        else:
-            st.warning("Please enter a username.")
+    # --- HOME PAGE VIEW ---
+    st.header("Welcome to Your AI Learning Partner")
+    st.markdown("""
+    This intelligent agent is designed to help you deeply understand any topic. 
+    You can upload documents, discuss general topics, take guided lessons, and test your knowledge with interactive quizzes.
+    
+    Ready to get started?
+    """)
+
+    # The button to trigger the login form
+    if st.button("Login / Get Started", type="primary"):
+        st.session_state.show_login = True
+        st.rerun()
+
+    # --- LOGIN FORM VIEW (only shows after button click) ---
+    if st.session_state.show_login:
+        st.markdown("---")
+        st.subheader("Create or Load Your Profile")
+        username = st.text_input("Enter your username:")
+        
+        if st.button("Start Session"):
+            if username:
+                with st.spinner("Setting up your session..."):
+                    st.session_state.user_info = get_or_create_user(username)
+                st.rerun()
+            else:
+                st.warning("Please enter a username.")
 else:
     # --- MAIN APP AFTER LOGIN ---
     username = st.session_state.user_info['username']
