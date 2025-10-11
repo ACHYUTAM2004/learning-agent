@@ -267,7 +267,7 @@ else:
 
     _, col2 = st.columns([0.8, 0.2]) # Adjust ratios as needed
     with col2:
-        if st.button("Sign Out Logout", use_container_width=True):
+        if st.button("Sign Out", use_container_width=True):
             sign_out()
             st.session_state.user_info = None
             st.rerun()
