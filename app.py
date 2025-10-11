@@ -328,6 +328,10 @@ else:
                 # This block runs after the mini-quiz for a step is finished
                 st.info("Great work on that section!")
                 st.session_state.lesson_step += 1
+
+                goal_info = st.session_state.current_goal
+                if goal_info:
+                    update_goal_progress(goal_info['id'], st.session_state.lesson_step)
                 
                 if st.session_state.lesson_step < len(plan):
                     # If there are more steps, prepare the next topic
