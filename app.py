@@ -285,26 +285,46 @@ else:
         elif st.session_state.step_phase == 'quizzing':
             index = st.session_state.current_question_index
             questions = st.session_state.quiz_questions
+            total_questions = len(questions)
 
-            if index < len(questions):
-                # Display the mini-quiz question using a form
+            if index < total_questions:
                 q = questions[index]
-                with st.form(key=f"mini_quiz_form_{index}"):
-                    st.info(f"Quick Question: {q['question']}")
-                    user_answer = st.radio("Choose:", q['options'], index=None, label_visibility="collapsed")
-                    if st.form_submit_button("Submit"):
-                        if user_answer == q['correct_answer']:
-                            st.success("Correct!")
-                        else:
-                            st.error(f"The correct answer was: {q['correct_answer']}")
+                st.info(f"Quick Question: {q['question']}")
+
+                # Use a session state key to track if an answer has been submitted
+                if f"mini_answer_submitted_{index}" not in st.session_state:
+                    with st.form(key=f"mini_quiz_form_{index}"):
+                        user_answer = st.radio("Choose your answer:", options=q['options'], index=None, label_visibility="collapsed")
+                        if st.form_submit_button("Submit Answer"):
+                            st.session_state[f"mini_user_answer_{index}"] = user_answer
+                            st.session_state[f"mini_answer_submitted_{index}"] = True
+                            st.rerun()
+                else:
+                    # This block runs AFTER submission to show feedback
+                    user_answer = st.session_state[f"mini_user_answer_{index}"]
+                    
+                    if user_answer == q['correct_answer']:
+                        st.success("Correct! 🎉")
+                        if f"mini_feedback_given_{index}" not in st.session_state:
+                             st.session_state[f"mini_feedback_given_{index}"] = True
+                    else:
+                        st.error(f"Not quite. The correct answer was: **{q['correct_answer']}**")
+                        # Generate an AI explanation for the wrong answer
+                        if f"mini_feedback_given_{index}" not in st.session_state:
+                            with st.spinner("Generating an explanation..."):
+                                knowledge_level = st.session_state.user_info['knowledge_level']
+                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], knowledge_level, pro_model)
+                                st.info(explanation)
+                            st.session_state[f"mini_feedback_given_{index}"] = True
+                    
+                    # Show a "Continue" button to proceed
+                    if st.button("Continue"):
                         st.session_state.current_question_index += 1
                         st.rerun()
             else:
                 # This block runs after the mini-quiz for a step is finished
                 st.info("Great work on that section!")
-                st.session_state.lesson_step += 1 # Advance to the next lesson step
-                if goal_info:
-                    update_goal_progress(goal_info['id'], st.session_state.lesson_step)
+                st.session_state.lesson_step += 1
                 
                 if st.session_state.lesson_step < len(plan):
                     # If there are more steps, prepare the next topic
@@ -312,8 +332,8 @@ else:
                         next_sub_topic = plan[st.session_state.lesson_step]
                         explanation = explain_sub_topic(next_sub_topic, st.session_state.user_info['knowledge_level'], flash_model)
                         st.session_state.messages.append({"role": "assistant", "content": explanation})
-                        st.session_state.step_phase = 'teaching' # Go back to the teaching phase for the new step
-                        st.session_state.current_question_index = 0 # Reset quiz index
+                        st.session_state.step_phase = 'teaching'
+                        st.session_state.current_question_index = 0
                     st.rerun()
                 else:
                     # If all steps are done, end the guided session and offer the final quiz
