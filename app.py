@@ -180,18 +180,21 @@ if "current_goal" not in st.session_state:
 if st.session_state.user_info is None:
     st.markdown("Welcome! Please enter a username to start your session.")
     username = st.text_input("Username")
-    knowledge_level = st.selectbox("What is your knowledge level on most topics?", ("Beginner", "Intermediate", "Expert"))
     if st.button("Start Session"):
         if username:
             with st.spinner("Setting up..."):
-                st.session_state.user_info = get_or_create_user(username, knowledge_level)
+                st.session_state.user_info = get_or_create_user(username)
             st.rerun()
         else:
             st.warning("Please enter a username.")
 else:
     # --- MAIN APP AFTER LOGIN ---
-    username = st.session_state.user_info['username']; user_id = st.session_state.user_info['id']
+    username = st.session_state.user_info['username']
+    user_id = st.session_state.user_info['id']
     st.sidebar.success(f"Logged in as **{username}**")
+
+    if "current_session_level" not in st.session_state:
+        st.session_state.current_session_level = "Intermediate" # Default value
 
     # Load chat history once
     if not st.session_state.messages:
@@ -201,11 +204,11 @@ else:
     # Sidebar selectors
     st.session_state.mode = st.sidebar.radio("Choose your learning mode:", ("Guided Learning Session", "General Q&A", "Study a Document"))
     st.sidebar.markdown("---")
-    levels = ("Beginner", "Intermediate", "Expert"); current_level = st.session_state.user_info.get('knowledge_level', 'Intermediate'); current_index = levels.index(current_level)
-    new_level = st.sidebar.selectbox("Adjust your knowledge level:", levels, index=current_index)
-    if new_level != current_level:
-        st.session_state.user_info['knowledge_level'] = new_level
-        st.sidebar.info(f"Knowledge level set to **{new_level}**.")
+    st.session_state.current_session_level = st.sidebar.selectbox(
+        "Set knowledge level for this topic:",
+        ("Beginner", "Intermediate", "Expert"),
+        index=("Beginner", "Intermediate", "Expert").index(st.session_state.current_session_level)
+    )
 
     st.subheader(f"Mode: {st.session_state.mode}")
 
@@ -383,7 +386,7 @@ else:
                 with st.chat_message("user"): st.markdown(prompt)
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
-                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, st.session_state.user_info['knowledge_level'])
+                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, knowledge_level=st.session_state.current_session_level)
                         save_message(user_id, "user", prompt); save_message(user_id, "assistant", response); st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
@@ -406,7 +409,7 @@ else:
                     with st.chat_message("user"): st.markdown(prompt)
                     with st.chat_message("assistant"):
                         with st.spinner("Thinking..."):
-                            response = generate_answer(prompt, pro_model, st.session_state.user_info['knowledge_level'],st.session_state.processed_file)
+                            response = generate_answer(prompt, pro_model, knowledge_level=st.session_state.current_session_level,file_name=st.session_state.processed_file)
                             save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
