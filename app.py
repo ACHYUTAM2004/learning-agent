@@ -13,7 +13,6 @@ from utils.supabase_handler import (
     get_or_create_user, save_message, get_chat_history
 )
 from utils.quiz_generator import generate_quiz
-from utils.youtube_url_handler import get_transcript
 
 # --- API & Model Configuration ---
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -197,7 +196,7 @@ else:
         if chat_history: st.session_state.messages = [{"role": msg["role"], "content": msg["content"]} for msg in chat_history]
 
     # Sidebar selectors
-    st.session_state.mode = st.sidebar.radio("Choose your learning mode:", ("Guided Learning Session", "General Q&A", "Study a Document", "Study a YouTube Video"))
+    st.session_state.mode = st.sidebar.radio("Choose your learning mode:", ("Guided Learning Session", "General Q&A", "Study a Document"))
     st.sidebar.markdown("---")
     levels = ("Beginner", "Intermediate", "Expert"); current_level = st.session_state.user_info.get('knowledge_level', 'Intermediate'); current_index = levels.index(current_level)
     new_level = st.sidebar.selectbox("Adjust your knowledge level:", levels, index=current_index)
@@ -368,56 +367,4 @@ else:
                             save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
-        elif st.session_state.mode == "Study a YouTube Video":
-            st.sidebar.header("Submit YouTube URL")
-            youtube_url = st.sidebar.text_input("Enter the YouTube video URL", key="youtube_url_input")
-            
-            if st.sidebar.button("Process Video"):
-                if youtube_url:
-                    with st.spinner("Fetching and processing video transcript..."):
-                        # The function now returns three values
-                        transcript, video_id, error = get_transcript(youtube_url)
-                        if error:
-                            st.error(error)
-                        else:
-                            # Use the clean video_id as the unique identifier
-                            chunks = textwrap.wrap(transcript, 1000)
-                            embeddings = generate_embeddings(chunks)
-                            store_embeddings(video_id, chunks, embeddings)
-                            
-                            # Store the clean video_id in the session state
-                            st.session_state.processed_file = video_id
-                            st.success(f"Successfully processed video '{video_id}'! You can now ask questions.")
-                            st.session_state.messages = []
-                            st.rerun()
-                else:
-                    st.sidebar.warning("Please enter a YouTube URL.")
-            
-            # --- Direct Q&A Interface ---
-            if st.session_state.processed_file:
-                 st.info(f"Ready to answer questions about: {st.session_state.processed_file}")
-
-            # Display chat history
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
-
-            # Chat input for asking questions
-            if prompt := st.chat_input("Ask a question about the video..."):
-                if st.session_state.processed_file:
-                    st.session_state.messages.append({"role": "user", "content": prompt})
-                    with st.chat_message("user"):
-                        st.markdown(prompt)
-                    
-                    with st.chat_message("assistant"):
-                        with st.spinner("Thinking..."):
-                            knowledge_level = st.session_state.user_info['knowledge_level']
-                            # Re-uses the same RAG function as the PDF mode
-                            response = generate_answer(prompt, pro_model, knowledge_level,st.session_state.processed_file) 
-                            save_message(user_id, "user", prompt, st.session_state.processed_file)
-                            save_message(user_id, "assistant", response, st.session_state.processed_file)
-                            st.markdown(response)
-                    
-                    st.session_state.messages.append({"role": "assistant", "content": response})
-                else:
-                    st.warning("Please process a video URL first.")
+        
