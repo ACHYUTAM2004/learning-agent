@@ -39,13 +39,14 @@ def store_embeddings(file_name: str, text_chunks: List[str], embeddings: List[Li
     supabase.table("documents").insert(data_to_insert).execute()
 
 
-def semantic_search(query_embedding: List[float], top_k: int = 5):
+def semantic_search(query_embedding: List[float], file_name: str, top_k: int = 5):
     """
-    ✅ CORRECT VERSION: Performs similarity search by calling the 'match_documents' RPC function.
+    Performs a filtered similarity search in the database.
     """
     results = supabase.rpc('match_documents', {
         'query_embedding': query_embedding,
-        'match_count': top_k
+        'match_count': top_k,
+        'filter_name': file_name  # Pass the filter to the RPC call
     }).execute()
     
     return results.data

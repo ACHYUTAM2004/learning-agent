@@ -56,10 +56,10 @@ def explain_sub_topic(sub_topic, knowledge_level, model):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def generate_answer(query,model,knowledge_level):
+def generate_answer(query,model,knowledge_level,file_name):
     """RAG pipeline for answering questions based on a PDF."""
     query_embedding = generate_embeddings([query])[0]
-    relevant_chunks = semantic_search(query_embedding, top_k=10)
+    relevant_chunks = semantic_search(query_embedding, file_name, top_k=10)
     
     if not relevant_chunks:
         return "Sorry, I couldn't find relevant information in the document."
@@ -358,7 +358,7 @@ else:
                     with st.chat_message("user"): st.markdown(prompt)
                     with st.chat_message("assistant"):
                         with st.spinner("Thinking..."):
-                            response = generate_answer(prompt, pro_model, st.session_state.user_info['knowledge_level'])
+                            response = generate_answer(prompt, pro_model, st.session_state.user_info['knowledge_level'],st.session_state.processed_file)
                             save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
@@ -399,7 +399,7 @@ else:
                         with st.spinner("Thinking..."):
                             knowledge_level = st.session_state.user_info['knowledge_level']
                             # Re-uses the same RAG function as the PDF mode
-                            response = generate_answer(prompt, pro_model, knowledge_level) 
+                            response = generate_answer(prompt, pro_model, knowledge_level,st.session_state.processed_file) 
                             save_message(user_id, "user", prompt, st.session_state.processed_file)
                             save_message(user_id, "assistant", response, st.session_state.processed_file)
                             st.markdown(response)
