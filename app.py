@@ -244,6 +244,7 @@ if st.session_state.user_info is None:
                 with st.form("sign_up_form", clear_on_submit=True): # 👈 NEW: clear_on_submit
                     username_signup = st.text_input("Username", key="signup_username") # 👈 NEW: Username field
                     email_signup = st.text_input("Email", key="signup_email")
+                    st.info("Password must be at least 6 characters long.")
                     password_signup = st.text_input("Password", type="password", key="signup_password")
                     
                     if st.form_submit_button("Sign Up", use_container_width=True):
