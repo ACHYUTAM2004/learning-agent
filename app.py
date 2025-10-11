@@ -192,7 +192,7 @@ if st.session_state.user_info is None:
         # Place all content within the central column
         st.image(
             "logo.png", 
-            width=80, # Set a specific width for the image
+            width=100, # Set a specific width for the image
         )
     
     with title_col2:
