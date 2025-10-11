@@ -79,18 +79,6 @@ def get_chat_history(user_id):
     history = supabase.table("conversations").select("role, content").eq("user_id", user_id).order("created_at").execute()
     return history.data
 
-def get_or_create_user(username):
-    """Fetches a user by username or creates a new one."""
-    user = supabase.table("users").select("*").eq("username", username).execute()
-    
-    if user.data:
-        return user.data[0]
-    else:
-        # Create a new user (without knowledge_level)
-        new_user = supabase.table("users").insert({"username": username}).execute()
-        return new_user.data[0]
-
-
 def create_learning_goal(user_id, topic, goal, total_steps):
     """Creates a new learning goal for a user and topic."""
     goal_data = supabase.table("learning_goals").insert({
@@ -140,3 +128,11 @@ def sign_out():
         return True, None
     except Exception as e:
         return False, str(e)
+
+def create_public_user_profile(user_id, username):
+    """Creates a profile for a new user in the public.users table."""
+    # This links the auth user to your public profiles
+    supabase.table("users").insert({
+        "id": user_id,
+        "username": username
+    }).execute()
