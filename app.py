@@ -313,7 +313,7 @@ else:
                         st.error(f"Not quite. The correct answer was: **{q['correct_answer']}**")
                         if f"feedback_given_{index}" not in st.session_state:
                             with st.spinner("Generating an explanation..."):
-                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], st.session_state.user_info['knowledge_level'], pro_model)
+                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], knowledge_level=st.session_state.current_session_level, pro_model)
                                 st.info(explanation)
                     st.session_state[f"feedback_given_{index}"] = True
                     if st.button("Next Question"): st.session_state.current_question_index += 1; st.rerun()
@@ -393,7 +393,7 @@ else:
                         # Generate an AI explanation for the wrong answer
                         if f"mini_feedback_given_{index}" not in st.session_state:
                             with st.spinner("Generating an explanation..."):
-                                knowledge_level = st.session_state.user_info['knowledge_level']
+                                knowledge_level = st.session_state.current_session_level
                                 explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], knowledge_level, pro_model)
                                 st.info(explanation)
                             st.session_state[f"mini_feedback_given_{index}"] = True
@@ -415,7 +415,7 @@ else:
                     # If there are more steps, prepare the next topic
                     with st.spinner("Preparing the next topic..."):
                         next_sub_topic = plan[st.session_state.lesson_step]
-                        explanation = explain_sub_topic(next_sub_topic, st.session_state.user_info['knowledge_level'], flash_model)
+                        explanation = explain_sub_topic(next_sub_topic, knowledge_level=st.session_state.current_session_level, flash_model)
                         st.session_state.messages.append({"role": "assistant", "content": explanation})
                         st.session_state.step_phase = 'teaching'
                         st.session_state.current_question_index = 0
@@ -453,7 +453,7 @@ else:
                             st.session_state.lesson_step = 0
                             st.session_state.messages = []
                             first_sub_topic = plan[0]
-                            explanation = explain_sub_topic(first_sub_topic, st.session_state.user_info['knowledge_level'], flash_model)
+                            explanation = explain_sub_topic(first_sub_topic, knowledge_level=st.session_state.current_session_level, flash_model)
                             st.session_state.messages.append({"role": "assistant", "content": f"Great! I've prepared a lesson on '{topic}'. Here is the first part:"})
                             st.session_state.messages.append({"role": "assistant", "content": explanation})
                             st.rerun()
