@@ -156,7 +156,7 @@ def generate_explanation(question, user_answer, correct_answer, knowledge_level,
 
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="AI Learning Partner", page_icon="🧠")
+st.set_page_config(page_title="Synapse AI", page_icon="🧠")
 # st.title("🧠 AI Learning Partner")
 
 # --- Initialize Session State ---
@@ -182,7 +182,7 @@ if "show_login" not in st.session_state:
 # --- User Onboarding ---
 if st.session_state.user_info is None:
     # --- HOME PAGE VIEW ---
-    st.header("Welcome to Your AI Learning Partner")
+    st.header("Welcome to Synapse AI, your AI Learning Partner")
     st.markdown("""
     This intelligent agent is designed to help you deeply understand any topic. 
     You can upload documents, discuss general topics, take guided lessons, and test your knowledge with interactive quizzes.
