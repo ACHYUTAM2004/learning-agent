@@ -56,19 +56,25 @@ def explain_sub_topic(sub_topic, knowledge_level, model):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def generate_answer(query,model,knowledge_level,file_name):
-    """RAG pipeline for answering questions based on a PDF."""
+def generate_answer(query, model, knowledge_level, file_name):
+    """
+    RAG pipeline that always falls back to general knowledge if the
+    document/video context is insufficient.
+    """
     query_embedding = generate_embeddings([query])[0]
+    
+    # Perform the filtered search
     relevant_chunks = semantic_search(query_embedding, file_name, top_k=10)
     
-    if not relevant_chunks:
-        return "Sorry, I couldn't find relevant information in the document."
-        
+    # --- THIS IS THE KEY CHANGE ---
+    # We no longer stop if chunks are not found.
+    # Instead, we create the context (which will be an empty string if nothing is found).
     context = "\n".join([chunk['chunk'] for chunk in relevant_chunks])
     
+    # The existing hybrid prompt is smart enough to handle an empty context.
     prompt = f"""
-    You are an expert AI Learning Partner. The user you are helping has a knowledge level of **'{knowledge_level}'**.
-    You must tailor your explanation's depth, language, and complexity to match this level. For 'Beginners', use simple terms and analogies. For 'Experts', provide technical, nuanced details.
+    You are an AI Learning Partner. The user you are helping has a knowledge level of '{knowledge_level}'.
+    You must tailor your explanation's depth and language to match this level.
 
     A user has asked the following question: "{query}"
 
@@ -78,10 +84,10 @@ def generate_answer(query,model,knowledge_level,file_name):
     {context}
     ---
 
-    Please follow these steps to answer the question, always keeping the user's knowledge level in mind:
-    1.  First, carefully analyze the provided context to see if it directly answers the user's question.
-    2.  If the context fully answers the question, provide the answer based **only** on that context, adapting the explanation for the user's knowledge level.
-    3.  If the context is insufficient, use your own general knowledge to provide a complete and accurate response, still tailored to the user's knowledge level.
+    Please follow these steps to answer the question:
+    1.  First, carefully analyze the provided context to see if it directly answers the question.
+    2.  If the context provides a good answer, use **only** that context, adapting it for the user's knowledge level.
+    3.  If the context is empty or insufficient, use your own general knowledge to provide a complete and accurate response, still tailored to the user's knowledge level.
     """
     
     try:
