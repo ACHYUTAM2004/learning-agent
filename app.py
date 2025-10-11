@@ -181,38 +181,53 @@ if "show_login" not in st.session_state:
 
 # --- User Onboarding ---
 if st.session_state.user_info is None:
-    # --- HOME PAGE VIEW ---
-    logo_path="logo.png"
-    st.image(
-        logo_path, 
-        width=150
-    )
-    st.header("Welcome to Synapse AI, your AI Learning Partner")
-    st.markdown("""
-    This intelligent agent is designed to help you deeply understand any topic. 
-    You can upload documents, discuss general topics, take guided lessons, and test your knowledge with interactive quizzes.
-    
-    Ready to get started?
-    """)
+    # --- NEW: Centered Home Page Layout ---
+    st.write("") # Pushes content down for better vertical alignment
+    st.write("")
 
-    # The button to trigger the login form
-    if st.button("Login / Get Started", type="primary"):
-        st.session_state.show_login = True
-        st.rerun()
+    # Create three columns with the middle one being wider
+    col1, col2, col3 = st.columns([1, 2, 1])
 
-    # --- LOGIN FORM VIEW (only shows after button click) ---
+    with col2:
+        # Place all content within the central column
+        st.image(
+            "logo.png", 
+            use_column_width=True # Logo will scale with column width
+        )
+        
+        st.markdown("<h1 style='text-align: center;'>Welcome to Synapse AI</h1>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center;'>Your Personal AI Learning Partner</h3>", unsafe_allow_html=True)
+        
+        st.write("") # Add some space
+
+        st.markdown("""
+        Unlock a smarter way to learn. Whether you're studying a dense document, exploring a new topic, or preparing for an exam, Synapse AI is here to guide you.
+        """)
+
+        st.write("")
+
+        # The button to trigger the login form
+        if st.button("Login / Get Started", type="primary", use_container_width=True):
+            st.session_state.show_login = True
+            st.rerun()
+
+    # --- LOGIN FORM (appears below after button click) ---
     if st.session_state.show_login:
         st.markdown("---")
-        st.subheader("Create or Load Your Profile")
-        username = st.text_input("Enter your username:")
         
-        if st.button("Start Session"):
-            if username:
-                with st.spinner("Setting up your session..."):
-                    st.session_state.user_info = get_or_create_user(username)
-                st.rerun()
-            else:
-                st.warning("Please enter a username.")
+        # Center the login form as well
+        _, login_col, _ = st.columns([1, 2, 1])
+        with login_col:
+            st.subheader("Create or Load Your Profile")
+            username = st.text_input("Enter your username:")
+            
+            if st.button("Start Session", use_container_width=True):
+                if username:
+                    with st.spinner("Setting up your session..."):
+                        st.session_state.user_info = get_or_create_user(username)
+                    st.rerun()
+                else:
+                    st.warning("Please enter a username.")
 else:
     # --- MAIN APP AFTER LOGIN ---
     username = st.session_state.user_info['username']
