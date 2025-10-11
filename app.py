@@ -182,6 +182,11 @@ if "show_login" not in st.session_state:
 # --- User Onboarding ---
 if st.session_state.user_info is None:
     # --- HOME PAGE VIEW ---
+    logo_path="logo.png"
+    st.image(
+        logo_path, 
+        width=150
+    )
     st.header("Welcome to Synapse AI, your AI Learning Partner")
     st.markdown("""
     This intelligent agent is designed to help you deeply understand any topic. 
