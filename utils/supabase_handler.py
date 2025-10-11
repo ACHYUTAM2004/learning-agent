@@ -107,13 +107,19 @@ def update_goal_progress(goal_id, current_progress):
         "progress": current_progress
     }).eq("id", goal_id).execute()
 
-def sign_up(email, password):
-    """Signs up a new user using Supabase Auth."""
+def sign_up(email, password, username):
+    """Signs up a new user with an email, password, and username."""
     try:
-        res = supabase.auth.sign_up({"email": email, "password": password})
-        if res.user:
-            return res.user, None
-        return None, "Sign up failed. User might already exist."
+        res = supabase.auth.sign_up({
+            "email": email, 
+            "password": password,
+            "options": {
+                "data": {
+                    "username": username
+                }
+            }
+        })
+        return res.user, None
     except Exception as e:
         return None, str(e)
 

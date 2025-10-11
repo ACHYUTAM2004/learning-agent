@@ -239,27 +239,26 @@ if st.session_state.user_info is None:
                             st.warning("Please enter your email and password.")
 
             with sign_up_tab:
-                with st.form("sign_up_form"):
-                    email = st.text_input("Email", key="signup_email")
-                    password = st.text_input("Password", type="password", key="signup_password")
+                # Use st.form to group inputs and the button
+                with st.form("sign_up_form", clear_on_submit=True): # 👈 NEW: clear_on_submit
+                    username_signup = st.text_input("Username", key="signup_username") # 👈 NEW: Username field
+                    email_signup = st.text_input("Email", key="signup_email")
+                    password_signup = st.text_input("Password", type="password", key="signup_password")
+                    
                     if st.form_submit_button("Sign Up", use_container_width=True):
-                        if email and password:
-                            user, error = sign_up(email, password) # Calls your supabase_handler function
+                        if email_signup and password_signup and username_signup:
+                            user, error = sign_up(email_signup, password_signup, username_signup) # Pass username
                             if user:
-                                st.success("Sign up successful! Please check your email to confirm your account, then log in.")
+                                st.success("Sign up successful! Please check your email to confirm.")
                             else:
                                 st.error(f"Sign up failed: {error}")
                         else:
-                            st.warning("Please enter an email and password.")
-
+                            st.warning("Please fill in all fields.")
 else:
     # --- MAIN APP AFTER LOGIN ---
-    username = st.session_state.user_info.email 
-    user_id = st.session_state.user_info.id 
+    username = st.session_state.user_info.user_metadata.get('username', st.session_state.user_info.email)
+    user_id = st.session_state.user_info.id
     st.sidebar.success(f"Logged in as **{username}**")
-
-    if "current_session_level" not in st.session_state:
-        st.session_state.current_session_level = "Intermediate" # Default value
 
     # Load chat history once
     if not st.session_state.messages:
