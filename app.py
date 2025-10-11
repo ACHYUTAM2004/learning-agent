@@ -313,7 +313,7 @@ else:
                         st.error(f"Not quite. The correct answer was: **{q['correct_answer']}**")
                         if f"feedback_given_{index}" not in st.session_state:
                             with st.spinner("Generating an explanation..."):
-                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], knowledge_level=st.session_state.current_session_level, pro_model)
+                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], st.session_state.current_session_level, pro_model)
                                 st.info(explanation)
                     st.session_state[f"feedback_given_{index}"] = True
                     if st.button("Next Question"): st.session_state.current_question_index += 1; st.rerun()
@@ -415,7 +415,7 @@ else:
                     # If there are more steps, prepare the next topic
                     with st.spinner("Preparing the next topic..."):
                         next_sub_topic = plan[st.session_state.lesson_step]
-                        explanation = explain_sub_topic(next_sub_topic, knowledge_level=st.session_state.current_session_level, flash_model)
+                        explanation = explain_sub_topic(next_sub_topic, st.session_state.current_session_level, flash_model)
                         st.session_state.messages.append({"role": "assistant", "content": explanation})
                         st.session_state.step_phase = 'teaching'
                         st.session_state.current_question_index = 0
@@ -453,7 +453,7 @@ else:
                             st.session_state.lesson_step = 0
                             st.session_state.messages = []
                             first_sub_topic = plan[0]
-                            explanation = explain_sub_topic(first_sub_topic, knowledge_level=st.session_state.current_session_level, flash_model)
+                            explanation = explain_sub_topic(first_sub_topic, st.session_state.current_session_level, flash_model)
                             st.session_state.messages.append({"role": "assistant", "content": f"Great! I've prepared a lesson on '{topic}'. Here is the first part:"})
                             st.session_state.messages.append({"role": "assistant", "content": explanation})
                             st.rerun()
@@ -468,7 +468,7 @@ else:
                 with st.chat_message("user"): st.markdown(prompt)
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
-                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, knowledge_level=st.session_state.current_session_level)
+                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, st.session_state.current_session_level)
                         save_message(user_id, "user", prompt); save_message(user_id, "assistant", response); st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
@@ -491,7 +491,7 @@ else:
                     with st.chat_message("user"): st.markdown(prompt)
                     with st.chat_message("assistant"):
                         with st.spinner("Thinking..."):
-                            response = generate_answer(prompt, pro_model, knowledge_level=st.session_state.current_session_level,file_name=st.session_state.processed_file)
+                            response = generate_answer(prompt, pro_model, st.session_state.current_session_level,file_name=st.session_state.processed_file)
                             save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
 
