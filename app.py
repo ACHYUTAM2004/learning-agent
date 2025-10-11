@@ -10,7 +10,8 @@ from utils.pdf_parser import extract_text
 from utils.embeddings import generate_embeddings
 from utils.supabase_handler import (
     semantic_search, upload_pdf, store_embeddings, 
-    get_or_create_user, save_message, get_chat_history, update_goal_progress, create_learning_goal
+    get_or_create_user, save_message, get_chat_history, update_goal_progress, create_learning_goal,
+    sign_in,sign_out,sign_up
 )
 from utils.quiz_generator import generate_quiz
 
@@ -157,7 +158,6 @@ def generate_explanation(question, user_answer, correct_answer, knowledge_level,
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Synapse AI", page_icon="🧠")
-# st.title("🧠 AI Learning Partner")
 
 # --- Initialize Session State ---
 if "user_info" not in st.session_state:
@@ -179,31 +179,24 @@ if "current_goal" not in st.session_state:
 if "show_login" not in st.session_state:
     st.session_state.show_login = False
 
-# --- User Onboarding ---
+# --- User Onboarding & Home Page ---
 if st.session_state.user_info is None:
-    # --- NEW: Centered Home Page Layout ---
-    st.write("") # Pushes content down for better vertical alignment
+    # --- HOME PAGE VIEW (Styling is preserved) ---
+    st.write("") 
     st.write("")
 
-    # Create three columns with the middle one being wider
     title_col1, title_col2 = st.columns([1, 4])
 
     with title_col1:
-        # Place all content within the central column
         st.image(
             "logo.png", 
-            width=100, # Set a specific width for the image
+            width=100
         )
     
     with title_col2:
-    # Use markdown with CSS for vertical alignment
         st.markdown("""
             <style>
-            .title-container {
-                display: flex;
-                align-items: center;
-                height: 80px; /* Match this to your image width for good alignment */
-            }
+            .title-container { display: flex; align-items: center; height: 80px; }
             </style>
             <div class="title-container">
                 <h1 style='margin: 0;'>Welcome to Synapse AI</h1>
@@ -211,37 +204,54 @@ if st.session_state.user_info is None:
         """, unsafe_allow_html=True)
             
     st.markdown("<h3 style='text-align: center;'>Your Personal AI Learning Partner</h3>", unsafe_allow_html=True)
-    
-    st.write("") # Add some space
-
-    st.markdown("""
-    Unlock a smarter way to learn. Whether you're studying a dense document, exploring a new topic, or preparing for an exam, Synapse AI is here to guide you.
-    """)
-
+    st.write("")
+    st.markdown("Unlock a smarter way to learn. Whether you're studying a dense document, exploring a new topic, or preparing for an exam, Synapse AI is here to guide you.")
     st.write("")
 
-    # The button to trigger the login form
     if st.button("Login / Get Started", type="primary", use_container_width=True):
         st.session_state.show_login = True
         st.rerun()
 
-    # --- LOGIN FORM (appears below after button click) ---
-    if st.session_state.show_login:
+    # --- NEW: LOGIN / SIGN UP FORM with Supabase Auth ---
+    if st.session_state.get("show_login", False):
         st.markdown("---")
         
-        # Center the login form as well
-        _, login_col, _ = st.columns([1, 2, 1])
-        with login_col:
-            st.subheader("Create or Load Your Profile")
-            username = st.text_input("Enter your username:")
+        _, form_col, _ = st.columns([1, 2, 1])
+        with form_col:
+            st.subheader("Login or Create an Account")
             
-            if st.button("Start Session", use_container_width=True):
-                if username:
-                    with st.spinner("Setting up your session..."):
-                        st.session_state.user_info = get_or_create_user(username)
-                    st.rerun()
-                else:
-                    st.warning("Please enter a username.")
+            # Create tabs for Sign In and Sign Up
+            sign_in_tab, sign_up_tab = st.tabs(["Sign In", "Sign Up"])
+
+            with sign_in_tab:
+                with st.form("sign_in_form"):
+                    email = st.text_input("Email")
+                    password = st.text_input("Password", type="password")
+                    if st.form_submit_button("Sign In", use_container_width=True, type="primary"):
+                        if email and password:
+                            user, error = sign_in(email, password) # Calls your supabase_handler function
+                            if user:
+                                st.session_state.user_info = user
+                                st.rerun()
+                            else:
+                                st.error(f"Login failed: {error}")
+                        else:
+                            st.warning("Please enter your email and password.")
+
+            with sign_up_tab:
+                with st.form("sign_up_form"):
+                    email = st.text_input("Email", key="signup_email")
+                    password = st.text_input("Password", type="password", key="signup_password")
+                    if st.form_submit_button("Sign Up", use_container_width=True):
+                        if email and password:
+                            user, error = sign_up(email, password) # Calls your supabase_handler function
+                            if user:
+                                st.success("Sign up successful! Please check your email to confirm your account, then log in.")
+                            else:
+                                st.error(f"Sign up failed: {error}")
+                        else:
+                            st.warning("Please enter an email and password.")
+
 else:
     # --- MAIN APP AFTER LOGIN ---
     username = st.session_state.user_info['username']

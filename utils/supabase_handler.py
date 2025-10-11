@@ -106,3 +106,31 @@ def update_goal_progress(goal_id, current_progress):
     supabase.table("learning_goals").update({
         "progress": current_progress
     }).eq("id", goal_id).execute()
+
+def sign_up(email, password):
+    """Signs up a new user using Supabase Auth."""
+    try:
+        res = supabase.auth.sign_up({"email": email, "password": password})
+        if res.user:
+            return res.user, None
+        return None, "Sign up failed. User might already exist."
+    except Exception as e:
+        return None, str(e)
+
+def sign_in(email, password):
+    """Signs in an existing user using Supabase Auth."""
+    try:
+        res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        if res.user:
+            return res.user, None
+        return None, "Invalid login credentials."
+    except Exception as e:
+        return None, str(e)
+
+def sign_out():
+    """Signs out the current user."""
+    try:
+        supabase.auth.sign_out()
+        return True, None
+    except Exception as e:
+        return False, str(e)
