@@ -172,6 +172,7 @@ if "user_info" not in st.session_state:
     st.session_state.quiz_questions = None 
     st.session_state.current_question_index = 0 
     st.session_state.score = 0
+    st.session_state.current_session_level = "Intermediate"
 
 if "current_goal" not in st.session_state:
     st.session_state.current_goal = None
