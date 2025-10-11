@@ -192,7 +192,8 @@ if st.session_state.user_info is None:
         # Place all content within the central column
         st.image(
             "logo.png", 
-            use_column_width=True # Logo will scale with column width
+            width=250, # Set a specific width for the image
+            use_container_width=False # Ensure it doesn't just fill the column
         )
         
         st.markdown("<h1 style='text-align: center;'>Welcome to Synapse AI</h1>", unsafe_allow_html=True)
