@@ -93,3 +93,20 @@ def get_or_create_user(username, knowledge_level):
             "knowledge_level": knowledge_level
         }).execute()
         return new_user.data[0]
+
+
+def create_learning_goal(user_id, topic, goal, total_steps):
+    """Creates a new learning goal for a user and topic."""
+    goal_data = supabase.table("learning_goals").insert({
+        "user_id": user_id,
+        "topic": topic,
+        "goal": goal,
+        "total_steps": total_steps
+    }).execute()
+    return goal_data.data[0] if goal_data.data else None
+
+def update_goal_progress(goal_id, current_progress):
+    """Updates the progress of a specific learning goal."""
+    supabase.table("learning_goals").update({
+        "progress": current_progress
+    }).eq("id", goal_id).execute()

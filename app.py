@@ -10,7 +10,7 @@ from utils.pdf_parser import extract_text
 from utils.embeddings import generate_embeddings
 from utils.supabase_handler import (
     semantic_search, upload_pdf, store_embeddings, 
-    get_or_create_user, save_message, get_chat_history
+    get_or_create_user, save_message, get_chat_history, update_goal_progress, create_learning_goal
 )
 from utils.quiz_generator import generate_quiz
 
@@ -173,6 +173,9 @@ if "user_info" not in st.session_state:
     st.session_state.current_question_index = 0 
     st.session_state.score = 0
 
+if "current_goal" not in st.session_state:
+    st.session_state.current_goal = None
+
 # --- User Onboarding ---
 if st.session_state.user_info is None:
     st.markdown("Welcome! Please enter a username to start your session.")
@@ -238,11 +241,20 @@ else:
             if st.button("End Session"): st.session_state.in_guided_session = False; st.session_state.quiz_mode = False; st.session_state.messages = []; st.rerun()
 
     elif st.session_state.in_guided_session:
-        # --- "TEACH & QUIZ" GUIDED SESSION UI ---
+        # --- "TEACH & QUIZ" GUIDED SESSION UI with GOAL TRACKING ---
         plan = st.session_state.lesson_plan
         step = st.session_state.lesson_step
+        goal_info = st.session_state.current_goal # Get current goal info
         
-        # Display the lesson plan in the sidebar for context
+        # --- NEW: Display Goal and Progress Bar in Sidebar ---
+        if goal_info:
+            st.sidebar.markdown("---")
+            st.sidebar.markdown(f"**Your Goal:** {goal_info['goal']}")
+            # Calculate progress based on the step before the quiz
+            progress_percent = step / goal_info['total_steps']
+            st.sidebar.progress(progress_percent, text=f"Step {step} of {goal_info['total_steps']}")
+            st.sidebar.markdown("---")
+        
         st.sidebar.markdown("### Lesson Plan")
         for i, sub_topic in enumerate(plan):
             st.sidebar.markdown(f"**➡️ {i+1}. {sub_topic}**" if i == step else f"{i+1}. {sub_topic}")
@@ -291,6 +303,8 @@ else:
                 # This block runs after the mini-quiz for a step is finished
                 st.info("Great work on that section!")
                 st.session_state.lesson_step += 1 # Advance to the next lesson step
+                if goal_info:
+                    update_goal_progress(goal_info['id'], st.session_state.lesson_step)
                 
                 if st.session_state.lesson_step < len(plan):
                     # If there are more steps, prepare the next topic
@@ -321,16 +335,25 @@ else:
         if st.session_state.mode == "Guided Learning Session":
             st.info("Enter a topic, and the AI will create a structured lesson for you.")
             topic = st.text_input("What topic would you like a guided lesson on?")
+             # --- NEW: Add input for the learning goal ---
+            goal = st.text_input("What is your goal for this session?", placeholder="e.g., Understand the basics for a class")
             if st.button("Start Guided Session"):
-                if topic:
+                if topic and goal:
                     with st.spinner("Creating a lesson plan..."):
                         plan = generate_lesson_plan(topic, pro_model)
                         if plan:
-                            st.session_state.lesson_plan = plan; st.session_state.in_guided_session = True; st.session_state.lesson_step = 0; st.session_state.messages = []
+                            st.session_state.current_goal = create_learning_goal(user_id, topic, goal, len(plan))
+                            st.session_state.lesson_plan = plan
+                            st.session_state.in_guided_session = True
+                            st.session_state.lesson_step = 0
+                            st.session_state.messages = []
                             first_sub_topic = plan[0]
                             explanation = explain_sub_topic(first_sub_topic, st.session_state.user_info['knowledge_level'], flash_model)
                             st.session_state.messages.append({"role": "assistant", "content": f"Great! I've prepared a lesson on '{topic}'. Here is the first part:"})
-                            st.session_state.messages.append({"role": "assistant", "content": explanation}); st.rerun()
+                            st.session_state.messages.append({"role": "assistant", "content": explanation})
+                            st.rerun()
+                else:
+                    st.warning("Please enter a topic and a goal.")
 
         elif st.session_state.mode == "General Q&A":
             for message in st.session_state.messages:
