@@ -186,31 +186,44 @@ if st.session_state.user_info is None:
     st.write("")
 
     # Create three columns with the middle one being wider
-    col1, col2, col3 = st.columns([1, 2, 1])
+    title_col1, title_col2 = st.columns([1, 4])
 
-    with col2:
+    with title_col1:
         # Place all content within the central column
         st.image(
             "logo.png", 
-            width=250, # Set a specific width for the image
-            use_container_width=False # Ensure it doesn't just fill the column
+            width=80, # Set a specific width for the image
         )
-        
-        st.markdown("<h1 style='text-align: center;'>Welcome to Synapse AI</h1>", unsafe_allow_html=True)
-        st.markdown("<h3 style='text-align: center;'>Your Personal AI Learning Partner</h3>", unsafe_allow_html=True)
-        
-        st.write("") # Add some space
-
+    
+    with title_col2:
+    # Use markdown with CSS for vertical alignment
         st.markdown("""
-        Unlock a smarter way to learn. Whether you're studying a dense document, exploring a new topic, or preparing for an exam, Synapse AI is here to guide you.
-        """)
+            <style>
+            .title-container {
+                display: flex;
+                align-items: center;
+                height: 80px; /* Match this to your image width for good alignment */
+            }
+            </style>
+            <div class="title-container">
+                <h1 style='margin: 0;'>Welcome to Synapse AI</h1>
+            </div>
+        """, unsafe_allow_html=True)
+            
+    st.markdown("<h3 style='text-align: center;'>Your Personal AI Learning Partner</h3>", unsafe_allow_html=True)
+    
+    st.write("") # Add some space
 
-        st.write("")
+    st.markdown("""
+    Unlock a smarter way to learn. Whether you're studying a dense document, exploring a new topic, or preparing for an exam, Synapse AI is here to guide you.
+    """)
 
-        # The button to trigger the login form
-        if st.button("Login / Get Started", type="primary", use_container_width=True):
-            st.session_state.show_login = True
-            st.rerun()
+    st.write("")
+
+    # The button to trigger the login form
+    if st.button("Login / Get Started", type="primary", use_container_width=True):
+        st.session_state.show_login = True
+        st.rerun()
 
     # --- LOGIN FORM (appears below after button click) ---
     if st.session_state.show_login:
