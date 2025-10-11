@@ -254,8 +254,8 @@ if st.session_state.user_info is None:
 
 else:
     # --- MAIN APP AFTER LOGIN ---
-    username = st.session_state.user_info['username']
-    user_id = st.session_state.user_info['id']
+    username = st.session_state.user_info.email 
+    user_id = st.session_state.user_info.id 
     st.sidebar.success(f"Logged in as **{username}**")
 
     if "current_session_level" not in st.session_state:
