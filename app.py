@@ -118,10 +118,10 @@ def generate_topic_answer(query, chat_history,model,knowledge_level):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def process_file(file_path, original_filename):
+def process_file(file_path, original_filename, user_id):
     """Processes an uploaded PDF file."""
     try:
-        upload_pdf(file_path, original_filename)
+        upload_pdf(file_path, original_filename, user_id)
         with open(file_path, "rb") as f:
             pdf_bytes = f.read()
         text = extract_text(pdf_bytes)
@@ -483,7 +483,7 @@ else:
                         tmp_file.write(uploaded_file.getvalue())
                         tmp_file_path = tmp_file.name
                     
-                    success = process_file(tmp_file_path, uploaded_file.name)
+                    success = process_file(tmp_file_path, uploaded_file.name, user_id)
                     os.remove(tmp_file_path)
 
                     if success:
