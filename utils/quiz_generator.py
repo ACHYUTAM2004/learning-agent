@@ -1,7 +1,7 @@
 import json
 import streamlit as st
 
-def generate_quiz(context, model, num_questions=2): # Add num_questions argument
+def generate_quiz(context, model, num_questions=2):
     """
     Generates a multiple-choice quiz from a given context using the provided model.
     """
@@ -24,7 +24,6 @@ def generate_quiz(context, model, num_questions=2): # Add num_questions argument
 
     try:
         response = model.generate_content(prompt)
-        # Clean up the response to ensure it's valid JSON
         json_response = response.text.strip().replace("```json", "").replace("```", "")
         quiz_questions = json.loads(json_response)
         return quiz_questions

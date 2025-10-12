@@ -182,7 +182,7 @@ if "show_login" not in st.session_state:
 
 # --- User Onboarding & Home Page ---
 if st.session_state.user_info is None:
-    # --- HOME PAGE VIEW (Styling is preserved) ---
+    # --- HOME PAGE VIEW ---
     st.write("") 
     st.write("")
 
@@ -213,7 +213,7 @@ if st.session_state.user_info is None:
         st.session_state.show_login = True
         st.rerun()
 
-    # --- NEW: LOGIN / SIGN UP FORM with Supabase Auth ---
+    # --- LOGIN / SIGN UP FORM with Supabase Auth ---
     if st.session_state.get("show_login", False):
         st.markdown("---")
         
@@ -250,10 +250,9 @@ if st.session_state.user_info is None:
                         if email_signup and password_signup and username_signup:
                             user, error = sign_up(email_signup, password_signup, username_signup)
                             if user:
-                                # --- ADD THIS LOGIC ---
                                 # After successful auth sign-up, create the public profile
                                 create_public_user_profile(user.id, username_signup)
-                                # --- END ADDED LOGIC ---
+                              
                                 st.success("Sign up successful! Please check your email to confirm.")
                             else:
                                 st.error(f"Sign up failed: {error}")
@@ -265,7 +264,7 @@ else:
     username = st.session_state.user_info.user_metadata.get('username', st.session_state.user_info.email)
     user_id = st.session_state.user_info.id
 
-    _, col2 = st.columns([0.8, 0.2]) # Adjust ratios as needed
+    _, col2 = st.columns([0.8, 0.2])
     with col2:
         if st.button("Sign Out", use_container_width=True):
             sign_out()
@@ -327,7 +326,7 @@ else:
         step = st.session_state.lesson_step
         goal_info = st.session_state.current_goal # Get current goal info
         
-        # --- NEW: Display Goal and Progress Bar in Sidebar ---
+        # --- Display Goal and Progress Bar in Sidebar ---
         if goal_info:
             st.sidebar.markdown("---")
             st.sidebar.markdown(f"**Your Goal:** {goal_info['goal']}")
@@ -381,7 +380,7 @@ else:
                             st.session_state[f"mini_answer_submitted_{index}"] = True
                             st.rerun()
                 else:
-                    # This block runs AFTER submission to show feedback
+            
                     user_answer = st.session_state[f"mini_user_answer_{index}"]
                     
                     if user_answer == q['correct_answer']:
@@ -440,7 +439,7 @@ else:
         if st.session_state.mode == "Guided Learning Session":
             st.info("Enter a topic, and the AI will create a structured lesson for you.")
             topic = st.text_input("What topic would you like a guided lesson on?")
-             # --- NEW: Add input for the learning goal ---
+             # --- Add input for the learning goal ---
             goal = st.text_input("What is your goal for this session?", placeholder="e.g., Understand the basics for a class")
             if st.button("Start Guided Session"):
                 if topic and goal:
@@ -496,7 +495,6 @@ else:
                         st.session_state.processed_file = None
             
             # --- Chat Interface for the Document ---
-            # This part of the UI is now only active if a file has been successfully processed
             if st.session_state.processed_file:
                 st.info(f"Ready to answer questions about: {st.session_state.processed_file}")
 

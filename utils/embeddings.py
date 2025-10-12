@@ -12,8 +12,6 @@ def generate_embeddings(text_chunks):
     Given a list of text chunks, returns a list of embeddings using Google's model.
     """
     try:
-        # Note: The Gemini API can handle a list of chunks in one go.
-        # model='models/text-embedding-004' is the latest model from Google
         result = genai.embed_content(
             model='models/text-embedding-004',
             content=text_chunks,

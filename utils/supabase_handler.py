@@ -12,7 +12,6 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def upload_pdf(file_path, original_filename, user_id):
     """Uploads a file to a user-specific folder in the Supabase bucket."""
-    # Create a path like: "user_id_folder/original_filename.pdf"
     destination_path = f"{user_id}/{original_filename}"
     
     with open(file_path, 'rb') as f:
@@ -53,7 +52,6 @@ def semantic_search(query_embedding: List[float], file_name: str, top_k: int = 5
     
     return results.data
 
-# --- NEW FUNCTIONS FOR PERSONALIZATION ---
 
 def get_or_create_user(username):
     """Fetches a user by username or creates a new one."""

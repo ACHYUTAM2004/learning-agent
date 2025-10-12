@@ -6,9 +6,7 @@ import logging
 # Set up basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Your helper functions (extract_text_pdfplumber, extract_text_pymupdf) remain the same...
 def extract_text_pdfplumber(file_bytes):
-    # ... (no change needed)
     text = ""
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         for page in pdf.pages:
@@ -16,7 +14,6 @@ def extract_text_pdfplumber(file_bytes):
     return text.strip()
 
 def extract_text_pymupdf(file_bytes):
-    # ... (no change needed)
     text = ""
     with fitz.open(stream=file_bytes, filetype="pdf") as doc:
         for page in doc:
