@@ -83,3 +83,20 @@ Follow these steps to set up and run the project locally.
       * **General Q\&A:** Have a free-form chat on any topic. Use the "Enhance with Web Search" button to get up-to-date information with sources.
       * **Study a Document / YouTube Video:** Upload a PDF or paste a YouTube URL. The AI will process the content, and you can then ask specific questions about it.
 3.  **Set Your Knowledge Level:** Use the dropdown in the sidebar to change your knowledge level for the current topic at any time, and the AI will immediately adapt its explanations.
+
+## Snippets from the streamlit app
+
+1. Home Page
+   <img width="1919" height="876" alt="image" src="https://github.com/user-attachments/assets/56e08a52-f229-43a6-864a-ff1613b736ee" />
+
+2. Guided session page
+   <img width="1918" height="876" alt="image" src="https://github.com/user-attachments/assets/335833ab-cf1d-4c89-bc85-4fdeabdfec8e" />
+
+3. General Q&A page
+   <img width="1919" height="876" alt="image" src="https://github.com/user-attachments/assets/b97ae2d9-87e4-4c98-8b96-c0e437aedd35" />
+
+4. Studying a document
+   <img width="1919" height="880" alt="image" src="https://github.com/user-attachments/assets/5bdb7127-7cea-44a8-b725-b3a313fb3a89" />
+
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://learning-agent.streamlit.app/)
