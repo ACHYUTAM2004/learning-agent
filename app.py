@@ -475,17 +475,40 @@ else:
         elif st.session_state.mode == "Study a Document":
             st.sidebar.header("Upload Your Document")
             uploaded_file = st.sidebar.file_uploader("Choose a PDF file", type="pdf")
+            # This block now runs immediately when a new file is uploaded
             if uploaded_file and uploaded_file.name != st.session_state.processed_file:
-                with st.spinner("Processing file..."):
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file: tmp_file.write(uploaded_file.getvalue()); tmp_file_path = tmp_file.name
+                with st.spinner("Processing file... This may take a moment."):
+                    # Save to a temporary file to get a path
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                        tmp_file.write(uploaded_file.getvalue())
+                        tmp_file_path = tmp_file.name
+                    
+                    # Call the processing function
                     success = process_file(tmp_file_path, uploaded_file.name)
+                    
+                    # Clean up the temporary file
                     os.remove(tmp_file_path)
-                    if success: st.session_state.processed_file = uploaded_file.name; st.success(f"Processed '{uploaded_file.name}'!"); st.session_state.messages = []; st.rerun()
+
+                    if success:
+                        st.session_state.processed_file = uploaded_file.name
+                        st.session_state.messages = [] # Clear chat for the new document
+                        st.success(f"Successfully processed '{uploaded_file.name}'!")
+                        st.rerun() # Rerun to refresh the chat view
+                    else:
+                        st.error("File processing failed. Please try again.")
+                        st.session_state.processed_file = None
             
+            # --- Chat Interface for the Document ---
+            if st.session_state.processed_file:
+                st.info(f"Ready to answer questions about: {st.session_state.processed_file}")
+
             for message in st.session_state.messages:
-                with st.chat_message(message["role"]): st.markdown(message["content"])
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
             if prompt := st.chat_input("Ask a question about the document..."):
-                if not st.session_state.processed_file: st.warning("Please upload a document first.")
+                if not st.session_state.processed_file:
+                    st.warning("Please upload and process a document first.")
                 else:
                     st.session_state.messages.append({"role": "user", "content": prompt})
                     with st.chat_message("user"): st.markdown(prompt)
