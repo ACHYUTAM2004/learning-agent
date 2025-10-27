@@ -96,15 +96,13 @@ def generate_answer(query, model, knowledge_level, file_name):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def generate_topic_answer(query, chat_history,model,knowledge_level):
+def generate_topic_answer(query, chat_history,model):
     """Generates an answer for a general topic using the AI's knowledge."""
     history_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
 
     prompt = f"""
-    You are an AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
-    Tailor your explanation's depth and language accordingly. For Beginners, use simple terms and analogies. For Experts, provide technical and nuanced details.
-
-    Review the conversation history and answer the user's latest question.
+    You are an AI Learning Partner. Review the conversation history and provide a clear, helpful answer to the user's latest question.
+    Adapt the complexity of your answer based naturally on the user's query and the preceding conversation.
 
     Conversation History:
     {history_context}
@@ -281,11 +279,16 @@ else:
     # Sidebar selectors
     st.session_state.mode = st.sidebar.radio("Choose your learning mode:", ("Guided Learning Session", "General Q&A", "Study a Document"))
     st.sidebar.markdown("---")
-    st.session_state.current_session_level = st.sidebar.selectbox(
-        "Set knowledge level for this topic:",
-        ("Beginner", "Intermediate", "Expert"),
-        index=("Beginner", "Intermediate", "Expert").index(st.session_state.current_session_level)
-    )
+    if st.session_state.mode != "General Q&A":
+        # Initialize if it doesn't exist (needed for other modes)
+        if "current_session_level" not in st.session_state:
+            st.session_state.current_session_level = "Intermediate"
+            
+        st.session_state.current_session_level = st.sidebar.selectbox(
+            "Set knowledge level for this topic:",
+            ("Beginner", "Intermediate", "Expert"),
+            index=("Beginner", "Intermediate", "Expert").index(st.session_state.current_session_level)
+        )
 
     st.subheader(f"Mode: {st.session_state.mode}")
 
@@ -467,7 +470,7 @@ else:
                 with st.chat_message("user"): st.markdown(prompt)
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
-                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, st.session_state.current_session_level)
+                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model)
                         save_message(user_id, "user", prompt); save_message(user_id, "assistant", response); st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
