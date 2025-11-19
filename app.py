@@ -458,7 +458,7 @@ else:
                 with st.chat_message("user"): st.markdown(prompt)
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
-                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model, st.session_state.current_session_level)
+                        response = generate_topic_answer(prompt, st.session_state.messages, flash_model)
                         save_message(user_id, "user", prompt); save_message(user_id, "assistant", response); st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
