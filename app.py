@@ -96,15 +96,13 @@ def generate_answer(query, model, knowledge_level, file_name):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def generate_topic_answer(query, chat_history,model,knowledge_level):
+def generate_topic_answer(query, chat_history,model):
     """Generates an answer for a general topic using the AI's knowledge."""
     history_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
 
     prompt = f"""
-    You are an AI Learning Partner. Your user's knowledge level is '{knowledge_level}'.
-    Tailor your explanation's depth and language accordingly. For Beginners, use simple terms and analogies. For Experts, provide technical and nuanced details.
-
-    Review the conversation history and answer the user's latest question.
+    You are an AI Learning Partner. Review the conversation history and provide a clear, helpful answer to the user's latest question.
+    Adapt the complexity of your answer based naturally on the user's query and the preceding conversation.
 
     Conversation History:
     {history_context}
@@ -281,16 +279,24 @@ else:
     # Sidebar selectors
     st.session_state.mode = st.sidebar.radio("Choose your learning mode:", ("Guided Learning Session", "General Q&A", "Study a Document"))
     st.sidebar.markdown("---")
-    st.session_state.current_session_level = st.sidebar.selectbox(
-        "Set knowledge level for this topic:",
-        ("Beginner", "Intermediate", "Expert"),
-        index=("Beginner", "Intermediate", "Expert").index(st.session_state.current_session_level)
-    )
+    if st.session_state.mode != "General Q&A":
+        # Initialize if it doesn't exist (needed for other modes)
+        if "current_session_level" not in st.session_state:
+            st.session_state.current_session_level = "Intermediate"
+            
+        st.session_state.current_session_level = st.sidebar.selectbox(
+            "Set knowledge level for this topic:",
+            ("Beginner", "Intermediate", "Expert"),
+            index=("Beginner", "Intermediate", "Expert").index(st.session_state.current_session_level)
+        )
 
     st.subheader(f"Mode: {st.session_state.mode}")
 
     # --- MAIN UI CONTROLLER ---
-    if st.session_state.quiz_mode:
+    
+    # CHECK 1: QUIZ MODE
+    # Only show quiz if active AND we are in the correct mode
+    if st.session_state.quiz_mode and st.session_state.mode == "Guided Learning Session":
         # --- QUIZ UI ---
         index = st.session_state.current_question_index; questions = st.session_state.quiz_questions; total_questions = len(questions)
         if index < total_questions:
@@ -320,17 +326,18 @@ else:
             st.success(f"Quiz complete! Your final score is: {st.session_state.score}/{total_questions}")
             if st.button("End Session"): st.session_state.in_guided_session = False; st.session_state.quiz_mode = False; st.session_state.messages = []; st.rerun()
 
-    elif st.session_state.in_guided_session:
+    # CHECK 2: GUIDED SESSION ACTIVE
+    # Only show active session if active AND we are in the correct mode
+    elif st.session_state.in_guided_session and st.session_state.mode == "Guided Learning Session":
         # --- "TEACH & QUIZ" GUIDED SESSION UI with GOAL TRACKING ---
         plan = st.session_state.lesson_plan
         step = st.session_state.lesson_step
         goal_info = st.session_state.current_goal # Get current goal info
         
-        # --- Display Goal and Progress Bar in Sidebar ---
+        # Display Goal and Progress Bar in Sidebar
         if goal_info:
             st.sidebar.markdown("---")
             st.sidebar.markdown(f"**Your Goal:** {goal_info['goal']}")
-            # Calculate progress based on the step before the quiz
             progress_percent = step / goal_info['total_steps']
             st.sidebar.progress(progress_percent, text=f"Step {step} of {goal_info['total_steps']}")
             st.sidebar.markdown("---")
@@ -344,7 +351,6 @@ else:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # This new state tracks if we are teaching or quizzing for the current step
         if 'step_phase' not in st.session_state:
             st.session_state.step_phase = 'teaching'
 
@@ -352,13 +358,12 @@ else:
         if st.session_state.step_phase == 'teaching':
             if st.button("I'm ready for a quick quiz on this!"):
                 with st.spinner("Generating mini-quiz..."):
-                    # Use only the last explanation as context for the quiz
                     context = st.session_state.messages[-1]['content']
-                    quiz = generate_quiz(context, pro_model, num_questions=2) # Generate a short, 1-question quiz
+                    quiz = generate_quiz(context, pro_model, num_questions=2)
                     if quiz:
                         st.session_state.quiz_questions = quiz
                         st.session_state.current_question_index = 0
-                        st.session_state.step_phase = 'quizzing' # Switch to the quizzing phase
+                        st.session_state.step_phase = 'quizzing'
                         st.rerun()
         
         # --- QUIZZING PHASE ---
@@ -371,47 +376,34 @@ else:
                 q = questions[index]
                 st.info(f"Quick Question: {q['question']}")
 
-                # Use a session state key to track if an answer has been submitted
                 if f"mini_answer_submitted_{index}" not in st.session_state:
                     with st.form(key=f"mini_quiz_form_{index}"):
-                        user_answer = st.radio("Choose your answer:", options=q['options'], index=None, label_visibility="collapsed")
-                        if st.form_submit_button("Submit Answer"):
+                        user_answer = st.radio("Choose:", q['options'], index=None, label_visibility="collapsed")
+                        if st.form_submit_button("Submit"):
                             st.session_state[f"mini_user_answer_{index}"] = user_answer
                             st.session_state[f"mini_answer_submitted_{index}"] = True
                             st.rerun()
                 else:
-            
                     user_answer = st.session_state[f"mini_user_answer_{index}"]
-                    
                     if user_answer == q['correct_answer']:
                         st.success("Correct! 🎉")
-                        if f"mini_feedback_given_{index}" not in st.session_state:
-                             st.session_state[f"mini_feedback_given_{index}"] = True
+                        if f"mini_feedback_given_{index}" not in st.session_state: st.session_state[f"mini_feedback_given_{index}"] = True
                     else:
                         st.error(f"Not quite. The correct answer was: **{q['correct_answer']}**")
-                        # Generate an AI explanation for the wrong answer
                         if f"mini_feedback_given_{index}" not in st.session_state:
                             with st.spinner("Generating an explanation..."):
-                                knowledge_level = st.session_state.current_session_level
-                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], knowledge_level, pro_model)
+                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], st.session_state.current_session_level, pro_model)
                                 st.info(explanation)
                             st.session_state[f"mini_feedback_given_{index}"] = True
                     
-                    # Show a "Continue" button to proceed
-                    if st.button("Continue"):
-                        st.session_state.current_question_index += 1
-                        st.rerun()
+                    if st.button("Continue"): st.session_state.current_question_index += 1; st.rerun()
             else:
-                # This block runs after the mini-quiz for a step is finished
                 st.info("Great work on that section!")
                 st.session_state.lesson_step += 1
-
                 goal_info = st.session_state.current_goal
-                if goal_info:
-                    update_goal_progress(goal_info['id'], st.session_state.lesson_step)
+                if goal_info: update_goal_progress(goal_info['id'], st.session_state.lesson_step)
                 
                 if st.session_state.lesson_step < len(plan):
-                    # If there are more steps, prepare the next topic
                     with st.spinner("Preparing the next topic..."):
                         next_sub_topic = plan[st.session_state.lesson_step]
                         explanation = explain_sub_topic(next_sub_topic, st.session_state.current_session_level, flash_model)
@@ -420,10 +412,8 @@ else:
                         st.session_state.current_question_index = 0
                     st.rerun()
                 else:
-                    # If all steps are done, end the guided session and offer the final quiz
                     st.success("You've completed the entire guided lesson! Well done! 🎉")
                     st.session_state.in_guided_session = False
-                    
                     if st.button("Take the Final Review Quiz"):
                         with st.spinner("Generating your final quiz..."):
                             conversation_context = " ".join([msg['content'] for msg in st.session_state.messages if msg['role'] == 'assistant'])
@@ -432,14 +422,15 @@ else:
                                 st.session_state.quiz_questions = final_quiz
                                 st.session_state.current_question_index = 0
                                 st.session_state.score = 0
-                                st.session_state.quiz_mode = True # Activate the main, comprehensive quiz UI
+                                st.session_state.quiz_mode = True
                                 st.rerun()
     else:
         # --- DEFAULT LOBBY / FREE-FORM CHAT UI ---
+        # This block now correctly executes when you switch modes, even if a guided session is paused in the background.
+        
         if st.session_state.mode == "Guided Learning Session":
             st.info("Enter a topic, and the AI will create a structured lesson for you.")
             topic = st.text_input("What topic would you like a guided lesson on?")
-             # --- Add input for the learning goal ---
             goal = st.text_input("What is your goal for this session?", placeholder="e.g., Understand the basics for a class")
             if st.button("Start Guided Session"):
                 if topic and goal:
@@ -474,46 +465,25 @@ else:
         elif st.session_state.mode == "Study a Document":
             st.sidebar.header("Upload Your Document")
             uploaded_file = st.sidebar.file_uploader("Choose a PDF file", type="pdf")
-            
-            # This block now runs immediately when a new file is uploaded
             if uploaded_file and uploaded_file.name != st.session_state.processed_file:
-                with st.spinner("Processing file... This may take a moment."):
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                        tmp_file.write(uploaded_file.getvalue())
-                        tmp_file_path = tmp_file.name
-                    
-                    success = process_file(tmp_file_path, uploaded_file.name, user_id)
+                with st.spinner("Processing file..."):
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file: tmp_file.write(uploaded_file.getvalue()); tmp_file_path = tmp_file.name
+                    success = process_file(tmp_file_path, uploaded_file.name)
                     os.remove(tmp_file_path)
-
-                    if success:
-                        st.session_state.processed_file = uploaded_file.name
-                        st.session_state.messages = [] # Clear chat for the new document
-                        st.success(f"Successfully processed '{uploaded_file.name}'!")
-                        st.rerun() # Rerun once to clear the old state and show the chat
-                    else:
-                        st.error("File processing failed. Please try again.")
-                        st.session_state.processed_file = None
+                    if success: st.session_state.processed_file = uploaded_file.name; st.success(f"Processed '{uploaded_file.name}'!"); st.session_state.messages = []; st.rerun()
             
-            # --- Chat Interface for the Document ---
             if st.session_state.processed_file:
                 st.info(f"Ready to answer questions about: {st.session_state.processed_file}")
 
-                for message in st.session_state.messages:
-                    with st.chat_message(message["role"]):
-                        st.markdown(message["content"])
-
-                if prompt := st.chat_input("Ask a question about the document..."):
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]): st.markdown(message["content"])
+            if prompt := st.chat_input("Ask a question about the document..."):
+                if not st.session_state.processed_file: st.warning("Please upload a document first.")
+                else:
                     st.session_state.messages.append({"role": "user", "content": prompt})
                     with st.chat_message("user"): st.markdown(prompt)
-                    
                     with st.chat_message("assistant"):
                         with st.spinner("Thinking..."):
-                            response = generate_answer(prompt, pro_model, st.session_state.current_session_level, file_name=st.session_state.processed_file)
-                            save_message(user_id, "user", prompt, st.session_state.processed_file)
-                            save_message(user_id, "assistant", response, st.session_state.processed_file)
-                            st.markdown(response)
-                    
+                            response = generate_answer(prompt, pro_model, st.session_state.current_session_level, st.session_state.processed_file)
+                            save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
-            else:
-                # If no file has been processed yet, show this message in the main area
-                st.warning("Please upload a document using the sidebar to begin.")

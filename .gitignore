@@ -2,5 +2,5 @@
 .env
 
 # Python virtual environment
-venv/
+ai_env/
 __pycache__/
