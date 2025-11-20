@@ -66,12 +66,10 @@ def generate_answer(query, model, knowledge_level, file_name):
     # Perform the filtered search
     relevant_chunks = semantic_search(query_embedding, file_name, top_k=10)
     
-    # --- THIS IS THE KEY CHANGE ---
-    # We no longer stop if chunks are not found.
-    # Instead, we create the context (which will be an empty string if nothing is found).
+    
     context = "\n".join([chunk['chunk'] for chunk in relevant_chunks])
     
-    # The existing hybrid prompt is smart enough to handle an empty context.
+
     prompt = f"""
     You are an AI Learning Partner. The user you are helping has a knowledge level of '{knowledge_level}'.
     You must tailor your explanation's depth and language to match this level.
@@ -153,6 +151,13 @@ def generate_explanation(question, user_answer, correct_answer, knowledge_level,
     except Exception as e:
         return f"Sorry, I couldn't generate an explanation at this time. Error: {e}"
 
+def generate_papers(query,model):
+    prompt=f"Give me research papers and other related documentation available on the net for the {query}. Don't give me anything else just links"
+    try:
+        response=model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Sorry, I couldn't generate an explanation at this time. Error: {e}"
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="Synapse AI", page_icon="🧠")
@@ -277,7 +282,7 @@ else:
         if chat_history: st.session_state.messages = [{"role": msg["role"], "content": msg["content"]} for msg in chat_history]
 
     # Sidebar selectors
-    st.session_state.mode = st.sidebar.radio("Choose your learning mode:", ("Guided Learning Session", "General Q&A", "Study a Document"))
+    st.session_state.mode = st.sidebar.radio("Choose your learning mode:", ("Guided Learning Session", "General Q&A", "Study a Document","Study from papers"))
     st.sidebar.markdown("---")
     if st.session_state.mode != "General Q&A":
         # Initialize if it doesn't exist (needed for other modes)
@@ -487,3 +492,16 @@ else:
                             response = generate_answer(prompt, pro_model, st.session_state.current_session_level, st.session_state.processed_file)
                             save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        elif st.session_state.mode=="Study from papers":
+            for message in st.session_state.messages:
+                with st.chat_message(message["role"]): st.markdown(message["content"])
+            if prompt := st.chat_input("Ask a free-form question..."):
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.chat_message("user"): st.markdown(prompt)
+                with st.chat_message("assistant"):
+                    with st.spinner("Thinking..."):
+                        response = generate_papers(prompt,pro_model)
+                        save_message(user_id, "user", prompt); save_message(user_id, "assistant", response); st.markdown(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
+
