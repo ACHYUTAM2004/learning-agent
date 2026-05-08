@@ -468,29 +468,51 @@ else:
         elif st.session_state.mode == "Study a Document":
             st.sidebar.header("Upload Your Document")
             uploaded_file = st.sidebar.file_uploader("Choose a PDF file", type="pdf")
-            if uploaded_file and uploaded_file.name != st.session_state.processed_file:
-                with st.spinner("Processing file..."):
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file: 
-                        tmp_file.write(uploaded_file.getvalue())
-                        tmp_file_path = tmp_file.name
-                    
-                    # FIXED: Added user_id to the function call
-                    success = process_file(tmp_file_path, uploaded_file.name, user_id) 
-                    
-                    os.remove(tmp_file_path)
-                    if success: 
-                        st.session_state.processed_file = uploaded_file.name
-                        st.success(f"Processed '{uploaded_file.name}'!")
-                        st.session_state.messages = []
-                        st.rerun()
             
+            # --- Initialize a state to track failed files ---
+            if "failed_file" not in st.session_state:
+                st.session_state.failed_file = None
+
+            if uploaded_file:
+                # Only process if it hasn't been processed AND hasn't already failed
+                if uploaded_file.name != st.session_state.processed_file and uploaded_file.name != st.session_state.failed_file:
+                    with st.spinner("Processing file..."):
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file: 
+                            tmp_file.write(uploaded_file.getvalue())
+                            tmp_file_path = tmp_file.name
+                        
+                        # Process the file
+                        success = process_file(tmp_file_path, uploaded_file.name, user_id) 
+                        os.remove(tmp_file_path)
+                        
+                        if success: 
+                            st.session_state.processed_file = uploaded_file.name
+                            st.session_state.failed_file = None # Clear any previous failures
+                            st.success(f"Processed '{uploaded_file.name}'!")
+                            st.session_state.messages = []
+                            st.rerun()
+                        else:
+                            # Mark as failed so we don't keep retrying in a loop
+                            st.session_state.failed_file = uploaded_file.name
+            
+            # --- Status Indicators ---
             if st.session_state.processed_file:
                 st.info(f"Ready to answer questions about: {st.session_state.processed_file}")
+            elif st.session_state.failed_file:
+                st.error(f"Failed to process '{st.session_state.failed_file}'. Check your terminal for specific errors.")
 
+            # --- Render Chat History ---
             for message in st.session_state.messages:
                 with st.chat_message(message["role"]): st.markdown(message["content"])
+            
+            # --- Chat Input & Logic ---
             if prompt := st.chat_input("Ask a question about the document..."):
-                if not st.session_state.processed_file: st.warning("Please upload a document first.")
+                if not uploaded_file: 
+                    st.warning("Please upload a document first.")
+                elif st.session_state.failed_file == uploaded_file.name:
+                    st.error("I cannot answer questions because the document failed to process.")
+                elif not st.session_state.processed_file:
+                    st.warning("Please wait for the document to finish processing.")
                 else:
                     st.session_state.messages.append({"role": "user", "content": prompt})
                     with st.chat_message("user"): st.markdown(prompt)
