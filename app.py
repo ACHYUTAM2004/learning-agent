@@ -17,7 +17,7 @@ from utils.quiz_generator import generate_quiz
 
 # --- API & Model Configuration ---
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-pro_model = genai.GenerativeModel('gemini-pro-latest')
+# Using Flash model exclusively
 flash_model = genai.GenerativeModel('gemini-flash-latest')
 
 
@@ -66,10 +66,8 @@ def generate_answer(query, model, knowledge_level, file_name):
     # Perform the filtered search
     relevant_chunks = semantic_search(query_embedding, file_name, top_k=10)
     
-    
     context = "\n".join([chunk['chunk'] for chunk in relevant_chunks])
     
-
     prompt = f"""
     You are an AI Learning Partner. The user you are helping has a knowledge level of '{knowledge_level}'.
     You must tailor your explanation's depth and language to match this level.
@@ -94,7 +92,7 @@ def generate_answer(query, model, knowledge_level, file_name):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def generate_topic_answer(query, chat_history,model):
+def generate_topic_answer(query, chat_history, model):
     """Generates an answer for a general topic using the AI's knowledge."""
     history_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
 
@@ -151,7 +149,7 @@ def generate_explanation(question, user_answer, correct_answer, knowledge_level,
     except Exception as e:
         return f"Sorry, I couldn't generate an explanation at this time. Error: {e}"
 
-def generate_papers(query,model):
+def generate_papers(query, model):
     prompt=f"Give me research papers and other related documentation available on the net for the {query}. Don't give me anything else just links"
     try:
         response=model.generate_content(prompt)
@@ -255,7 +253,7 @@ if st.session_state.user_info is None:
                             if user:
                                 # After successful auth sign-up, create the public profile
                                 create_public_user_profile(user.id, username_signup)
-                              
+                               
                                 st.success("Sign up successful! Please check your email to confirm.")
                             else:
                                 st.error(f"Sign up failed: {error}")
@@ -323,7 +321,7 @@ else:
                         st.error(f"Not quite. The correct answer was: **{q['correct_answer']}**")
                         if f"feedback_given_{index}" not in st.session_state:
                             with st.spinner("Generating an explanation..."):
-                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], st.session_state.current_session_level, pro_model)
+                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], st.session_state.current_session_level, flash_model)
                                 st.info(explanation)
                     st.session_state[f"feedback_given_{index}"] = True
                     if st.button("Next Question"): st.session_state.current_question_index += 1; st.rerun()
@@ -364,7 +362,7 @@ else:
             if st.button("I'm ready for a quick quiz on this!"):
                 with st.spinner("Generating mini-quiz..."):
                     context = st.session_state.messages[-1]['content']
-                    quiz = generate_quiz(context, pro_model, num_questions=2)
+                    quiz = generate_quiz(context, flash_model, num_questions=2)
                     if quiz:
                         st.session_state.quiz_questions = quiz
                         st.session_state.current_question_index = 0
@@ -397,7 +395,7 @@ else:
                         st.error(f"Not quite. The correct answer was: **{q['correct_answer']}**")
                         if f"mini_feedback_given_{index}" not in st.session_state:
                             with st.spinner("Generating an explanation..."):
-                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], st.session_state.current_session_level, pro_model)
+                                explanation = generate_explanation(q['question'], user_answer, q['correct_answer'], st.session_state.current_session_level, flash_model)
                                 st.info(explanation)
                             st.session_state[f"mini_feedback_given_{index}"] = True
                     
@@ -422,7 +420,7 @@ else:
                     if st.button("Take the Final Review Quiz"):
                         with st.spinner("Generating your final quiz..."):
                             conversation_context = " ".join([msg['content'] for msg in st.session_state.messages if msg['role'] == 'assistant'])
-                            final_quiz = generate_quiz(conversation_context, pro_model, num_questions=5)
+                            final_quiz = generate_quiz(conversation_context, flash_model, num_questions=5)
                             if final_quiz:
                                 st.session_state.quiz_questions = final_quiz
                                 st.session_state.current_question_index = 0
@@ -440,7 +438,7 @@ else:
             if st.button("Start Guided Session"):
                 if topic and goal:
                     with st.spinner("Creating a lesson plan..."):
-                        plan = generate_lesson_plan(topic, pro_model)
+                        plan = generate_lesson_plan(topic, flash_model)
                         if plan:
                             st.session_state.current_goal = create_learning_goal(user_id, topic, goal, len(plan))
                             st.session_state.lesson_plan = plan
@@ -489,7 +487,7 @@ else:
                     with st.chat_message("user"): st.markdown(prompt)
                     with st.chat_message("assistant"):
                         with st.spinner("Thinking..."):
-                            response = generate_answer(prompt, pro_model, st.session_state.current_session_level, st.session_state.processed_file)
+                            response = generate_answer(prompt, flash_model, st.session_state.current_session_level, st.session_state.processed_file)
                             save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
         
@@ -501,7 +499,6 @@ else:
                 with st.chat_message("user"): st.markdown(prompt)
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
-                        response = generate_papers(prompt,pro_model)
+                        response = generate_papers(prompt, flash_model)
                         save_message(user_id, "user", prompt); save_message(user_id, "assistant", response); st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
-
