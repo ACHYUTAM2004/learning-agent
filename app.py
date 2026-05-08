@@ -470,10 +470,19 @@ else:
             uploaded_file = st.sidebar.file_uploader("Choose a PDF file", type="pdf")
             if uploaded_file and uploaded_file.name != st.session_state.processed_file:
                 with st.spinner("Processing file..."):
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file: tmp_file.write(uploaded_file.getvalue()); tmp_file_path = tmp_file.name
-                    success = process_file(tmp_file_path, uploaded_file.name)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file: 
+                        tmp_file.write(uploaded_file.getvalue())
+                        tmp_file_path = tmp_file.name
+                    
+                    # FIXED: Added user_id to the function call
+                    success = process_file(tmp_file_path, uploaded_file.name, user_id) 
+                    
                     os.remove(tmp_file_path)
-                    if success: st.session_state.processed_file = uploaded_file.name; st.success(f"Processed '{uploaded_file.name}'!"); st.session_state.messages = []; st.rerun()
+                    if success: 
+                        st.session_state.processed_file = uploaded_file.name
+                        st.success(f"Processed '{uploaded_file.name}'!")
+                        st.session_state.messages = []
+                        st.rerun()
             
             if st.session_state.processed_file:
                 st.info(f"Ready to answer questions about: {st.session_state.processed_file}")
@@ -488,7 +497,9 @@ else:
                     with st.chat_message("assistant"):
                         with st.spinner("Thinking..."):
                             response = generate_answer(prompt, flash_model, st.session_state.current_session_level, st.session_state.processed_file)
-                            save_message(user_id, "user", prompt, st.session_state.processed_file); save_message(user_id, "assistant", response, st.session_state.processed_file); st.markdown(response)
+                            save_message(user_id, "user", prompt, st.session_state.processed_file)
+                            save_message(user_id, "assistant", response, st.session_state.processed_file)
+                            st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
         
         elif st.session_state.mode=="Study from papers":
